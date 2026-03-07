@@ -1,0 +1,11 @@
+crewai[litellm]
+crewai-tools
+langchain-groq
+langchain-google-genai
+pydantic
+streamlit
+python-dotenv
+litellm
+folium
+streamlit-folium
+geopy
