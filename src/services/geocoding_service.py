@@ -54,7 +54,6 @@ class GeocodingService:
         Respeita o rate limiting da API gratuita.
         """
         try:
-            import requests  # type: ignore
             time.sleep(settings.geocoding_delay)
             location = self.geolocator.geocode(location_name)
             if location:

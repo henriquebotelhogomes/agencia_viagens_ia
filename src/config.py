@@ -10,9 +10,9 @@ ENV_FILE = BASE_DIR / ".env"
 
 class Settings(BaseSettings):
     # Nomes EXATOS das variáveis do .env (Puro Pydantic v2)
-    GROQ_API_KEY: str = ""
-    SERPER_API_KEY: str = ""
-    GOOGLE_API_KEY: str = ""
+    GROQ_API_KEY: str
+    SERPER_API_KEY: str
+    GOOGLE_API_KEY: str
 
     @field_validator("GROQ_API_KEY", "SERPER_API_KEY", "GOOGLE_API_KEY", mode="before")
     @classmethod
@@ -57,4 +57,4 @@ class Settings(BaseSettings):
 
 
 # Singleton instance
-settings = Settings()
+settings = Settings()  # type: ignore

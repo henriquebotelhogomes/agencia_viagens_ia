@@ -13,7 +13,7 @@ class FinanceService:
         Mocado nos testes via requests.get.
         """
         try:
-            import requests  # type: ignore
+            import requests
 
             response = requests.get(
                 f"https://api.exchangeratesapi.io/v1/latest?base={base}"
