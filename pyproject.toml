@@ -1,0 +1,52 @@
+[project]
+name = "agencia-viagens-ia"
+version = "0.1.0"
+description = "Agência de Viagens Multiagentes com CrewAI e Streamlit"
+authors = [
+    { name = "Henrique Botelho Gomes", email = "" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "crewai",
+    "crewai-tools",
+    "langchain-groq",
+    "langchain-google-genai",
+    "pydantic",
+    "streamlit",
+    "python-dotenv",
+    "litellm",
+    "folium",
+    "streamlit-folium",
+    "geopy",
+    "pydantic-settings",
+    "google-generativeai>=0.8.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+    "pytest-mock>=3.10.0",
+]
+
+[tool.uv]
+required-environments = ["sys_platform == 'win32' and platform_machine == 'AMD64'"]
+link-mode = "copy"
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I", "W"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+ignore_missing_imports = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

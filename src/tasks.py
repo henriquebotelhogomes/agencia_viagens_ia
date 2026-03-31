@@ -18,12 +18,14 @@ class TravelTasks:
     def calculate_logistics(self, agent, destino, dias, origem):
         return Task(
             description=(
-                f"Estime custos para {dias} dias de {origem} a {destino}: "
-                f"voo, hotel 3 estrelas/noite, alimentação/dia."
+                f"Para {dias} dias em {destino}, calcule custos detalhados: "
+                f"1. VOO: Nome de uma companhia que opere o trecho {origem}->{destino}. "
+                f"2. HOTEL: Nome de um hotel (+ estrelas) em {destino}. "
+                f"3. ALIMENTAÇÃO: Detalhe o que compõe o gasto diário (café/almoço/jantar)."
             ),
             expected_output=(
-                "Tabela com: voo (USD), hotel/noite (USD), alimentação/dia (USD), total estimado. "
-                "Máximo 100 palavras."
+                "Tabela em BRL (R$) com: Companhia Aérea, Nome do Hotel e estrelas, "
+                "Detalhe da Alimentação/dia, TARIFA (R$) por item e TOTAL estimado."
             ),
             agent=agent
         )
@@ -32,11 +34,12 @@ class TravelTasks:
         return Task(
             description=(
                 f"Crie roteiro de {dias} dias em {destino} com foco em: {interesses}. "
-                f"Use os dados dos agentes anteriores."
+                f"Use EXATAMENTE a tabela de custos detalhada em REAIS (R$) gerada pelo colega logístico."
             ),
             expected_output=(
-                f"Roteiro em Markdown com: título, tabela de custos, {dias} dias (manhã/tarde/noite), "
-                f"3 dicas. Seja conciso."
+                f"Roteiro Markdown completo com: Título atrativo, Tabela de Custos Detalhada em R$, "
+                f"Cronograma de {dias} dias (manhã/tarde/noite) e dicas exclusivas. "
+                f"A moeda deve ser exclusivamente R$."
             ),
             agent=agent
         )

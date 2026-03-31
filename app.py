@@ -1,184 +1,168 @@
 import streamlit as st
-import os
 import sys
 import io
-import json
-import re
-import time
-from dotenv import load_dotenv
-
-# Bibliotecas para o Mapa Interativo
 import folium
 from streamlit_folium import st_folium
-from geopy.geocoders import Nominatim
 
-# LangChain para a Extração Pós-Processamento
-from langchain_groq import ChatGroq
-
-# Importa o orquestrador que liga os agentes e as tarefas
+# Importações do Projeto
+from src.config import settings
 from src.crew_builder import TravelCrew
+from src.services.geocoding_service import GeocodingService
+from src.services.finance_service import FinanceService
 
-# Carrega as variáveis de ambiente
-load_dotenv()
+# Configuração da Página
+st.set_page_config(
+    page_title="Agência de Viagens IA", 
+    page_icon="✈️", 
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
-st.set_page_config(page_title="Agência de Viagens IA", page_icon="✈️", layout="wide")
+# Inicialização de Serviços (Singletons de facto dentro do contexto do Streamlit)
+@st.cache_resource
+def get_geocoding_service():
+    return GeocodingService()
 
-if not os.getenv("GROQ_API_KEY") or not os.getenv("SERPER_API_KEY"):
-    st.error("⚠️ Falta configurar as variáveis de ambiente. Verifique o seu ficheiro `.env`.")
-    st.stop()
+@st.cache_resource
+def get_finance_service():
+    return FinanceService()
 
-st.title("✈️ Roteiro de Viagens com Multiagentes (CrewAI)")
-st.markdown(
-    "Uma equipa de Inteligência Artificial irá pesquisar na web, calcular custos e gerar um roteiro de viagem personalizado com mapeamento automático.")
+geo_service = get_geocoding_service()
+fin_service = get_finance_service()
 
+# Funções Auxiliares de Cache
+@st.cache_data
+def get_itinerary_map_data(itinerary_str: str):
+    return geo_service.process_itinerary_locations(itinerary_str)
+
+# Interface Principal
+st.title("✈️ Agência de Viagens Inteligente")
+st.markdown("""
+Esta equipe de Agentes de IA utiliza **Agentic RAG** para planejar sua viagem, 
+pesquisando dados em tempo real e otimizando custos.
+""")
+
+# Formulário de Entrada
 with st.form("travel_form"):
     col1, col2 = st.columns(2)
     with col1:
-        origem = st.text_input("📍 Local de Origem", placeholder="Ex: Lisboa, Portugal")
-        destino = st.text_input("🌍 Destino", placeholder="Ex: Quioto, Japão")
+        origem = st.text_input("📍 Local de Origem", placeholder="Ex: São Paulo, Brasil")
+        destino = st.text_input("🌍 Destino", placeholder="Ex: Paris, França")
     with col2:
         dias = st.number_input("📅 Duração (Dias)", min_value=1, max_value=30, value=5)
-        interesses = st.text_input("🎭 Interesses", placeholder="Ex: Culinária local, templos, arte...")
+        interesses = st.text_input("🎭 Interesses", placeholder="Ex: Museus, gastronomia, parques...")
 
-    submitted = st.form_submit_button("🚀 Iniciar Planeamento", use_container_width=True)
+    submitted = st.form_submit_button("🚀 Planejar Roteiro Profissional", use_container_width=True)
 
 if submitted:
     if not destino or not origem:
-        st.warning("Por favor, preencha pelo menos a Origem e o Destino.")
+        st.warning("Por favor, preencha a Origem e o Destino para continuar.")
     else:
         st.divider()
-        st.subheader("🛠️ Os Agentes estão a trabalhar...")
+        st.subheader("🛠️ Orquestração de Agentes em Tempo Real")
 
-        log_expander = st.expander("Ver Pensamento dos Agentes (Live Logs)", expanded=True)
+        # Container para Logs Vivos
+        log_expander = st.expander("Ver 'Raciocínio' dos Agentes (Live)", expanded=True)
         log_placeholder = log_expander.empty()
 
+        # Captura de logs para exibição em tempo real
         old_stdout = sys.stdout
         sys.stdout = mystdout = io.StringIO()
 
         final_itinerary = None
-
         try:
-            with st.spinner("A equipa de IA está a pesquisar voos, atrações e preços..."):
-                trip_crew = TravelCrew(destino=destino, dias=dias, origem=origem, interesses=interesses)
+            with st.spinner(f"A equipe está mapeando {destino}..."):
+                trip_crew = TravelCrew(
+                    destino=destino, 
+                    dias=dias, 
+                    origem=origem, 
+                    interesses=interesses
+                )
                 final_itinerary = trip_crew.run()
-
         except Exception as e:
-            st.error(f"Ocorreu um erro durante a orquestração: {e}")
+            st.error(f"Erro na orquestração: {str(e)}")
         finally:
             sys.stdout = old_stdout
             logs = mystdout.getvalue()
             if logs:
-                log_placeholder.code(logs[-4000:] + "\n\n[... Fim dos Logs Processados ...]", language="text")
+                log_placeholder.code(logs[-5000:], language="text")
 
         if final_itinerary:
-            st.success("Roteiro Finalizado com Sucesso! 🎉")
+            st.success("Roteiro Finalizado! ✨")
             roteiro_str = str(final_itinerary)
 
-            tab1, tab2, tab3 = st.tabs(["🗺️ O Seu Roteiro", "📍 Mapa Interativo", "💰 Painel FinOps (Custos)"])
+            tab1, tab2, tab3 = st.tabs([
+                "🗺️ Seu Roteiro", 
+                "📍 Mapa de Atrações", 
+                "💰 Auditoria FinOps"
+            ])
 
             # ABA 1: ROTEIRO
             with tab1:
                 st.markdown(roteiro_str)
-                st.download_button("📥 Descarregar Roteiro (Markdown)", data=roteiro_str,
-                                   file_name=f"Roteiro_{destino}.md", mime="text/markdown", use_container_width=True)
+                st.download_button(
+                    "📥 Exportar para Markdown", 
+                    data=roteiro_str,
+                    file_name=f"Roteiro_{destino}.md", 
+                    mime="text/markdown", 
+                    use_container_width=True
+                )
 
-            # ABA 2: MAPA INTERATIVO (COM MÚLTIPLOS PINOS)
+            # ABA 2: MAPA INTERATIVO
             with tab2:
-                st.markdown(f"### Explorar as sugestões em: {destino}")
-
-                with st.spinner("A extrair locais do roteiro e a gerar o mapa (isto pode demorar alguns segundos)..."):
+                st.markdown(f"### Locais Sugeridos em {destino}")
+                
+                with st.spinner("Geolocalizando pontos turísticos..."):
                     try:
-                        geolocator = Nominatim(user_agent="agencia_viagens_ia_portfolio")
-                        location = geolocator.geocode(destino)
-
-                        if location:
-                            # 1. Cria o mapa centrado no destino
-                            m = folium.Map(location=[location.latitude, location.longitude], zoom_start=12)
-
-                            # Adiciona o Ponto Central (Destino)
+                        # Busca coordenadas do destino central
+                        dest_coords = geo_service.get_coordinates(destino)
+                        
+                        if dest_coords:
+                            m = folium.Map(location=dest_coords, zoom_start=13)
+                            
+                            # Marcador Central
                             folium.Marker(
-                                [location.latitude, location.longitude],
-                                popup=f"<b>Centro de {destino}</b>",
+                                dest_coords,
+                                popup=f"<b>{destino}</b>",
                                 icon=folium.Icon(color="red", icon="star")
                             ).add_to(m)
 
-                            # 2. Usa um LLM rápido para extrair a lista de locais do texto do Roteiro
-                            llm_extractor = ChatGroq(
-                                api_key=os.getenv("GROQ_API_KEY"),
-                                model="llama-3.1-8b-instant",
-                                temperature=0
-                            )
-
-                            prompt_extracao = f"""
-                            Você é um assistente de extração de dados. Analise o roteiro abaixo e extraia os nomes das principais atrações, restaurantes ou hotéis sugeridos.
-                            Retorne APENAS um array JSON válido com no máximo 6 locais.
-                            Exemplo de formato: ["Museu do Louvre, Paris", "Torre Eiffel, Paris"]
-
-                            Roteiro:
-                            {roteiro_str}
-                            """
-
-                            resposta = llm_extractor.invoke(prompt_extracao)
-
-                            # 3. Faz o Parsing do JSON devolvido pelo LLM
-                            locais_extraidos = []
-                            try:
-                                match = re.search(r'\[.*?\]', resposta.content, re.DOTALL)
-                                if match:
-                                    locais_extraidos = json.loads(match.group(0))
-                            except json.JSONDecodeError:
-                                st.warning("Não foi possível processar a lista de locais automaticamente.")
-
-                            # 4. Adiciona cada local ao Mapa
-                            if locais_extraidos:
-                                st.info(
-                                    f"📍 Foram identificados {len(locais_extraidos)} locais para visitar. A geolocalizar...")
-
-                                # Barra de progresso opcional para melhor UX
-                                progresso = st.progress(0)
-                                for i, local in enumerate(locais_extraidos):
-                                    try:
-                                        # Pausa obrigatória de 1 segundo (Regra da API gratuita Nominatim/OpenStreetMap)
-                                        time.sleep(1.1)
-
-                                        loc_coords = geolocator.geocode(local)
-                                        if loc_coords:
-                                            folium.Marker(
-                                                [loc_coords.latitude, loc_coords.longitude],
-                                                popup=f"<b>{local}</b>",
-                                                icon=folium.Icon(color="blue", icon="info-sign")
-                                            ).add_to(m)
-                                    except Exception:
-                                        pass  # Ignora se não encontrar as coordenadas daquele local específico
-
-                                    # Atualiza barra de progresso
-                                    progresso.progress((i + 1) / len(locais_extraidos))
-
-                                progresso.empty()  # Remove a barra ao terminar
-
-                            # Renderiza o mapa completo
-                            st_folium(m, width=800, height=450, returned_objects=[])
+                            # Processa locais do roteiro (com cache para não repetir chamadas caras)
+                            locais = get_itinerary_map_data(roteiro_str)
+                            
+                            if locais:
+                                for loc in locais:
+                                    folium.Marker(
+                                        [loc.lat, loc.lon],
+                                        popup=f"<b>{loc.name}</b>",
+                                        icon=folium.Icon(color="blue", icon="info-sign")
+                                    ).add_to(m)
+                                
+                                st.info(f"📍 {len(locais)} locais mapeados com sucesso.")
+                            
+                            st_folium(m, width="100%", height=500, returned_objects=[])
                         else:
-                            st.info("📍 Mapa indisponível: Não foi possível localizar as coordenadas iniciais.")
+                            st.warning("Não foi possível carregar o mapa para este destino.")
                     except Exception as e:
-                        st.error(f"Erro ao carregar o serviço de mapas: {e}")
+                        st.error(f"Erro ao processar mapa: {e}")
 
             # ABA 3: FINOPS
             with tab3:
-                st.markdown("### Auditoria de Consumo de Tokens (FinOps)")
-                try:
-                    total_tokens = len(str(logs)) // 3 + 2500
-                    prompt_tokens = int(total_tokens * 0.8)
-                    completion_tokens = int(total_tokens * 0.2)
-
-                    custo_gpt4 = (prompt_tokens / 1_000_000 * 5.00) + (completion_tokens / 1_000_000 * 15.00)
-                    custo_groq = (prompt_tokens / 1_000_000 * 0.59) + (completion_tokens / 1_000_000 * 0.79)
-
-                    colA, colB, colC = st.columns(3)
-                    colA.metric("Tokens Processados", f"{total_tokens:,}")
-                    colB.metric("Custo no Groq", f"${custo_groq:.4f}")
-                    colC.metric("Custo no GPT-4o", f"${custo_gpt4:.4f}")
-                    st.success(
-                        f"💸 **Poupança:** Ao optar pelo modelo open-source via Groq, poupou **${(custo_gpt4 - custo_groq):.4f}** nesta pesquisa.")
-                except:
-                    st.info("Estatísticas não disponíveis para esta execução.")
+                st.markdown("### 📊 Análise de Custos e Performance")
+                
+                stats = fin_service.estimate_costs(logs)
+                
+                col_a, col_b, col_c = st.columns(3)
+                col_a.metric("Tokens Estimados", f"{int(stats['total_tokens']):,}")
+                col_b.metric("Custo no Groq", f"${stats['custo_groq']:.4f}")
+                col_c.metric("Custo no GPT-4o", f"${stats['custo_gpt4o']:.4f}")
+                
+                st.success(
+                    f"💡 **Economia Realizada:** Ao usar Llama 3 via Groq, você economizou "
+                    f"**${stats['savings']:.4f}** comparado ao GPT-4o."
+                )
+                
+                st.caption("""
+                *Nota: Os custos são baseados em heurísticas de volume de tokens. 
+                Os valores do Groq refletem os preços atuais por 1M de tokens.*
+                """)
