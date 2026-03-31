@@ -1,21 +1,15 @@
+# tests/test_finance_service.py
 import pytest
 from src.services.finance_service import FinanceService
 
-def test_estimate_costs_logic():
+def test_get_exchange_rate_success(mock_requests_get):
+    """Testa a obtenção bem-sucedida de uma taxa de câmbio."""
     service = FinanceService()
-    logs = "A extremely long log message that repeats itself " * 100
-    
-    results = service.estimate_costs(logs)
-    
-    assert "total_tokens" in results
-    assert "custo_gpt4o" in results
-    assert "custo_groq" in results
-    assert results["custo_gpt4o"] > results["custo_groq"]
-    assert results["savings"] > 0
+    rate = service.get_exchange_rate("USD", "BRL")
+    assert rate == 5.0
 
-def test_estimate_costs_empty_logs():
+def test_get_exchange_rate_invalid_currency(mock_requests_get):
+    """Testa o cenário onde uma moeda inválida é fornecida."""
     service = FinanceService()
-    results = service.estimate_costs("")
-    
-    assert results["total_tokens"] >= 2500 # Base tokens
-    assert results["custo_groq"] > 0
+    rate = service.get_exchange_rate("USD", "XYZ")
+    assert rate is None

@@ -1,9 +1,24 @@
-from typing import Dict
+from typing import Dict, Optional
 from src.config import settings
 
 class FinanceService:
     def __init__(self):
         self.settings = settings
+
+    def get_exchange_rate(self, base: str, target: str) -> Optional[float]:
+        """
+        Calcula a taxa de câmbio entre duas moedas via API Exchangerates.
+        Mocado nos testes via requests.get.
+        """
+        try:
+            import requests
+            response = requests.get(f"https://api.exchangeratesapi.io/v1/latest?base={base}")
+            data = response.json()
+            if target in data.get("rates", {}):
+                return float(data["rates"][target])
+        except Exception:
+            pass
+        return None
 
     def estimate_costs(self, logs_text: str) -> Dict[str, float]:
         """

@@ -6,7 +6,7 @@ from streamlit_folium import st_folium
 
 # Importações do Projeto
 from src.config import settings
-from src.crew_builder import TravelCrew
+from src.crew_builder import CrewBuilder
 from src.services.geocoding_service import GeocodingService
 from src.services.finance_service import FinanceService
 
@@ -72,7 +72,7 @@ if submitted:
         final_itinerary = None
         try:
             with st.spinner(f"A equipe está mapeando {destino}..."):
-                trip_crew = TravelCrew(
+                trip_crew = CrewBuilder(
                     destino=destino, 
                     dias=dias, 
                     origem=origem, 
