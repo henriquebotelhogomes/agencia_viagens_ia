@@ -1,17 +1,18 @@
-import os
 from pathlib import Path
+
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field, field_validator
 
 # Localiza o diretório raiz do projeto (onde está o .env)
 BASE_DIR = Path(__file__).resolve().parent.parent
 ENV_FILE = BASE_DIR / ".env"
 
+
 class Settings(BaseSettings):
     # Nomes EXATOS das variáveis do .env (Puro Pydantic v2)
-    GROQ_API_KEY: str
-    SERPER_API_KEY: str
-    GOOGLE_API_KEY: str
+    GROQ_API_KEY: str = ""
+    SERPER_API_KEY: str = ""
+    GOOGLE_API_KEY: str = ""
 
     @field_validator("GROQ_API_KEY", "SERPER_API_KEY", "GOOGLE_API_KEY", mode="before")
     @classmethod
@@ -25,11 +26,11 @@ class Settings(BaseSettings):
     @property
     def groq_api_key(self) -> str:
         return self.GROQ_API_KEY
-    
+
     @property
     def serper_api_key(self) -> str:
         return self.SERPER_API_KEY
-    
+
     @property
     def google_api_key(self) -> str:
         return self.GOOGLE_API_KEY
@@ -51,10 +52,9 @@ class Settings(BaseSettings):
 
     # O motor que lê o arquivo .env
     model_config = SettingsConfigDict(
-        env_file=str(ENV_FILE),
-        env_file_encoding="utf-8",
-        extra="ignore"
+        env_file=str(ENV_FILE), env_file_encoding="utf-8", extra="ignore"
     )
+
 
 # Singleton instance
 settings = Settings()
