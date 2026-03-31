@@ -4,7 +4,7 @@ from src.config import settings
 
 os.environ["GEMINI_API_KEY"] = settings.google_api_key
 
-async def test_fallback():
+def test_fallback():
     from litellm import completion
     try:
         response = completion(
@@ -17,4 +17,5 @@ async def test_fallback():
     except Exception as e:
         print("Error:", e)
 
-asyncio.run(test_fallback())
+if __name__ == "__main__":
+    test_fallback()
