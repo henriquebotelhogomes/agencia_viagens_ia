@@ -1,4 +1,5 @@
 from typing import Any, Optional, cast
+
 from crewai import Agent, Crew, Process, Task
 
 from src.agents import TravelAgents

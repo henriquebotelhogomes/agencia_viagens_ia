@@ -1,6 +1,6 @@
 [project]
 name = "agencia-viagens-ia"
-version = "0.1.0"
+version = "1.2.0"
 description = "Agência de Viagens Multiagentes com CrewAI e Streamlit"
 authors = [
     { name = "Henrique Botelho Gomes", email = "" }
@@ -12,6 +12,7 @@ dependencies = [
     "crewai-tools",
     "langchain-groq",
     "langchain-google-genai",
+    "requests",
     "pydantic",
     "streamlit",
     "python-dotenv",
@@ -27,9 +28,12 @@ dependencies = [
 dev = [
     "pytest>=7.0.0",
     "ruff>=0.1.0",
+    "black>=24.0.0",
     "mypy>=1.0.0",
     "pytest-mock>=3.10.0",
     "pytest-cov>=4.1.0",
+    "types-requests",
+    "pre-commit",
 ]
 
 [tool.uv]
