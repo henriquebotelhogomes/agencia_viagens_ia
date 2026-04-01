@@ -13,7 +13,7 @@ os.environ["GEMINI_API_KEY"] = settings.google_api_key
 import litellm
 
 litellm.set_verbose = True  # type: ignore[attr-defined] # Logs para debug do loop de evento e 503s
-litellm.drop_params = True  # type: ignore[attr-defined] # Remove parâmetros não suportados
+litellm.drop_params = True  # Remove parâmetros não suportados
 
 
 class TravelAgents:
