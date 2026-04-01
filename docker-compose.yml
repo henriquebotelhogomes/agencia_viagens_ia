@@ -1,0 +1,38 @@
+services:
+  app:
+    build: 
+      context: .
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    restart: unless-stopped
+    healthcheck:
+      # Using Python to check health since curl might not be available in slim image
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: streamlit run app.py --server.port 8501 --server.address 0.0.0.0
+
+  tests:
+    profiles:
+      - test
+    build:
+      context: .
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    depends_on:
+      app:
+        condition: service_healthy
+    command: pytest tests/ -v --cov=src --cov-report=html
