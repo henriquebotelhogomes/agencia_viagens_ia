@@ -2,10 +2,12 @@ import io
 
 import folium
 import streamlit as st
-from streamlit_folium import st_folium
 
 # Importações do Projeto
-from src.crew_builder import CrewBuilder
+from src.builder.crew_builder import CrewBuilder
+from streamlit_folium import st_folium
+
+from src.services.cache_service import cache_service
 from src.services.finance_service import FinanceService
 from src.services.geocoding_service import GeocodingService
 from src.utils.logger import LOG_DIR, add_streamlit_sink, setup_logger
@@ -100,36 +102,54 @@ if submitted:
         st.divider()
         st.subheader("🛠️ Orquestração de Agentes em Tempo Real")
 
-        # Container para Logs Vivos
-        log_expander = st.expander("Ver 'Raciocínio' dos Agentes (Live)", expanded=True)
-        log_placeholder = log_expander.empty()
+        # Verifica cache
+        cached_itinerary = cache_service.get_cached_itinerary(
+            origem, destino, dias, interesses
+        )
 
-        # Captura de logs via Loguru Sink (Streamlit + Buffer para FinOps)
-        import io
+        if cached_itinerary:
+            st.success("⚡ Roteiro recuperado do Cache instantaneamente!")
+            final_itinerary = cached_itinerary
+            logs_for_finops = (
+                "✨ Custos FinOps: $0.00 (Servido diretamente do Cache)"
+            )
+        else:
+            # Container para Logs Vivos
+            log_expander = st.expander(
+                "Ver 'Raciocínio' dos Agentes (Live)", expanded=True
+            )
+            log_placeholder = log_expander.empty()
 
-        log_buffer = io.StringIO()
+            # Captura de logs via Loguru Sink (Streamlit + Buffer para FinOps)
+            import io
 
-        log_sink_id = add_streamlit_sink(log_placeholder)
-        buffer_sink_id = logger.add(log_buffer, format="{message}", level="INFO")
+            log_buffer = io.StringIO()
 
-        logger.info(f"Iniciando planejamento para {destino}...")
+            log_sink_id = add_streamlit_sink(log_placeholder)
+            buffer_sink_id = logger.add(log_buffer, format="{message}", level="INFO")
 
-        final_itinerary = None
-        try:
-            with st.spinner(f"A equipe está mapeando {destino}..."):
-                trip_crew = CrewBuilder(
-                    destino=destino, dias=dias, origem=origem, interesses=interesses
-                )
-                final_itinerary = trip_crew.run()
-        except Exception as e:
-            logger.error(f"Erro na orquestração: {str(e)}")
-            st.error(f"Erro na orquestração: {str(e)}")
-        finally:
-            # Remove os sinks para não vazar logs na próxima rodada
-            logger.remove(log_sink_id)
-            logger.remove(buffer_sink_id)
-            logs_for_finops = log_buffer.getvalue()
-            logger.info("Processamento Finalizado.")
+            logger.info(f"Iniciando planejamento para {destino}...")
+
+            final_itinerary = None
+            try:
+                with st.spinner(f"A equipe está mapeando {destino}..."):
+                    trip_crew = CrewBuilder(
+                        destino=destino, dias=dias, origem=origem, interesses=interesses
+                    )
+                    final_itinerary = trip_crew.run()
+                    if final_itinerary:
+                        cache_service.save_itinerary(
+                            origem, destino, dias, interesses, str(final_itinerary)
+                        )
+            except Exception as e:
+                logger.error(f"Erro na orquestração: {str(e)}")
+                st.error(f"Erro na orquestração: {str(e)}")
+            finally:
+                # Remove os sinks para não vazar logs na próxima rodada
+                logger.remove(log_sink_id)
+                logger.remove(buffer_sink_id)
+                logs_for_finops = log_buffer.getvalue()
+                logger.info("Processamento Finalizado.")
 
         if final_itinerary:
             st.success("Roteiro Finalizado! ✨")
@@ -207,7 +227,7 @@ if submitted:
                     stats = fin_service.estimate_costs("")
 
                 st.success(
-                    f"💡 **Economia Realizada:** Ao usar Llama 3 via Groq, você economizou "
+                    f"💡 **Economia:** Ao usar Llama 3 via Groq, você economizou "
                     f"**${stats['savings']:.4f}** comparado ao GPT-4o."
                 )
 

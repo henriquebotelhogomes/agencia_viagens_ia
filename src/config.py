@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     SERPER_API_KEY: str = ""
     GOOGLE_API_KEY: str = ""
+    REDIS_URL: str = ""
+    CACHE_TTL_SECONDS: int = 86400  # 24 hours
 
     @field_validator("GROQ_API_KEY", "SERPER_API_KEY", "GOOGLE_API_KEY", mode="before")
     @classmethod
