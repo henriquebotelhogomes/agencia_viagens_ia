@@ -4,7 +4,7 @@ import folium
 import streamlit as st
 
 # Importações do Projeto
-from src.builder.crew_builder import CrewBuilder
+from src.crew_builder import CrewBuilder
 from streamlit_folium import st_folium
 
 from src.services.cache_service import cache_service
