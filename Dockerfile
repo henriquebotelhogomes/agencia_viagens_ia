@@ -1,38 +1,35 @@
-# Use uv image for extremely fast installs
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
-
-ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
-
-WORKDIR /app
-
-# Install dependencies first (layer caching)
-RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --frozen --no-install-project --no-dev
-
-# Copy the project
-ADD . /app
-
-# Sync the project
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev
-
-# Final image
+# Use a standard Python image
 FROM python:3.12-slim-bookworm
 
+# Install uv binary from the official image
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uv/bin/uv
+
+# Set work directory
 WORKDIR /app
 
-# Copy the environment from the builder
-COPY --from=builder /app/.venv /app/.venv
+# Enable bytecode compilation
+ENV UV_COMPILE_BYTECODE=1
 
-# Copy the source code
-COPY . /app
+# Copy dependency files
+COPY pyproject.toml uv.lock ./
 
-# Ensure we use the virtualenv
-ENV PATH="/app/.venv/bin:$PATH"
+# Install dependencies using the uv binary 
+# (This is very fast and ensures the venv is built for the container's OS)
+RUN --mount=type=cache,target=/root/.cache/uv \
+    /uv/bin/uv sync --frozen --no-install-project --no-dev
+
+# Copy the rest of the application
+COPY . .
+
+# Final sync to include project code
+RUN --mount=type=cache,target=/root/.cache/uv \
+    /uv/bin/uv sync --frozen --no-dev
 
 # Expose Streamlit port
 EXPOSE 8501
 
+# Place uv in PATH
+ENV PATH="/app/.venv/bin:/uv/bin:$PATH"
+
 # Run the application
-ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+ENTRYPOINT ["uv", "run", "streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]

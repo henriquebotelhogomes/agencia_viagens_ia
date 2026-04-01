@@ -6,8 +6,6 @@ services:
       - "8501:8501"
     env_file:
       - .env
-    volumes:
-      - .:/app
     environment:
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
@@ -18,7 +16,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    command: streamlit run app.py --server.port 8501 --server.address 0.0.0.0
 
   tests:
     profiles:
