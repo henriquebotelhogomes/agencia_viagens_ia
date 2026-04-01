@@ -19,10 +19,15 @@ class CacheService:
                 self.client.ping()
                 logger.info("🟢 Redis Cache Service configurado com sucesso.")
             except Exception as e:
+                import os
+
                 logger.warning(
-                    "🔴 Falha ao conectar no Redis (DNS ou Rede). "
-                    f"Fallback para No-Cache. Erro: {e}"
+                    "🔴 Falha de rede no Redis. Limpando ambiente e desativando cache "
+                    f"para garantir estabilidade. Erro: {e}"
                 )
+                # Removemos a URL do ambiente para que outras libs (CrewAI/LangChain)
+                # não tentem usar o host quebrado e causem crash na orquestração.
+                os.environ.pop("REDIS_URL", None)
                 self.enabled = False
 
     def _generate_key(

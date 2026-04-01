@@ -142,8 +142,13 @@ if submitted:
                             origem, destino, dias, interesses, str(final_itinerary)
                         )
             except Exception as e:
-                logger.error(f"Erro na orquestração: {str(e)}")
-                st.error(f"Erro na orquestração: {str(e)}")
+                # Se chegarmos aqui, algo na orquestração falhou (pode ser o Redis ou a própria Crew)
+                msg_erro = str(e)
+                if "connecting to" in msg_erro.lower():
+                    logger.warning(f"⚠️ Aviso de Rede (Cache): {msg_erro}. O sistema tentará prosseguir.")
+                else:
+                    logger.error(f"Erro crítico na orquestração: {msg_erro}")
+                    st.error(f"Erro na orquestração: {msg_erro}")
             finally:
                 # Remove os sinks para não vazar logs na próxima rodada
                 logger.remove(log_sink_id)
