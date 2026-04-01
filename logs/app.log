@@ -7,3 +7,4 @@
 2026-04-01 13:34:37 | INFO     | __main__:test_logger_flow:41 - Outra mensagem para FinOps
 2026-04-01 13:35:45 | INFO     | __main__:<module>:15 - Aplicação Iniciada.
 2026-04-01 13:35:45 | INFO     | __main__:<module>:82 - Iniciando planejamento para Goiânia, Goiás...
+2026-04-01 13:36:45 | INFO     | __main__:<module>:102 - Processamento Finalizado.

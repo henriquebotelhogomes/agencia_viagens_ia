@@ -145,7 +145,8 @@ if submitted:
                                 icon=folium.Icon(color="red", icon="star"),
                             ).add_to(m)
 
-                            # Processa locais do roteiro (com cache para não repetir chamadas caras)
+                            # Processa locais do roteiro 
+                            # (com cache para não repetir chamadas caras)
                             locais = get_itinerary_map_data(roteiro_str)
 
                             if locais:
