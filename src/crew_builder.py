@@ -86,6 +86,7 @@ class CrewBuilder:
             tasks=[task_research, task_logistics, task_itinerary],
             process=Process.sequential,
             verbose=True,
+            cache=False,  # Desativa o cache nativo problemático
         )
 
     def run(self) -> Any:

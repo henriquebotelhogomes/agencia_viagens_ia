@@ -145,7 +145,15 @@ if submitted:
                 # Se chegarmos aqui, algo na orquestração falhou (pode ser o Redis ou a própria Crew)
                 msg_erro = str(e)
                 if "connecting to" in msg_erro.lower():
-                    logger.warning(f"⚠️ Aviso de Rede (Cache): {msg_erro}. O sistema tentará prosseguir.")
+                    logger.warning(
+                        f"⚠️ Aviso de Rede (Cache): {msg_erro}. O sistema está tentando prosseguir automaticamente..."
+                    )
+                    # Tentamos o RETRY agora que o CacheService já limpou o REDIS_URL do ambiente
+                    try:
+                        final_itinerary = trip_crew.run()
+                    except Exception as retry_e:
+                        logger.error(f"Erro fatal na segunda tentativa: {retry_e}")
+                        st.error(f"Erro persistente na orquestração: {retry_e}")
                 else:
                     logger.error(f"Erro crítico na orquestração: {msg_erro}")
                     st.error(f"Erro na orquestração: {msg_erro}")
