@@ -1,8 +1,6 @@
 # tests/test_config.py
 import os
 
-import pytest
-
 from src.config import Settings
 
 

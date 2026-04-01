@@ -1,5 +1,5 @@
-import asyncio
 import os
+
 from src.config import settings
 
 os.environ["GEMINI_API_KEY"] = settings.google_api_key

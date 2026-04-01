@@ -1,6 +1,7 @@
-import os
-from src.config import settings
 import google.generativeai as genai
+
+from src.config import settings
+
 
 def list_gemini_models():
     print(f"Testing with Key: {settings.google_api_key[:10]}...")
