@@ -24,7 +24,7 @@ dependencies = [
     "google-generativeai>=0.8.6",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest>=7.0.0",
     "ruff>=0.1.0",
@@ -37,7 +37,6 @@ dev = [
 ]
 
 [tool.uv]
-required-environments = ["sys_platform == 'win32' and platform_machine == 'AMD64'"]
 link-mode = "copy"
 
 [tool.ruff]

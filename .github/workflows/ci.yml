@@ -21,10 +21,15 @@ jobs:
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: |
+          pip install uv
+          uv sync --group dev
 
-      - name: Ruff (lint & format)
-        run: uv run ruff check src/ tests/ && uv run ruff format src/ tests/ --check
+      - name: Ruff Check (lint)
+        run: uv run ruff check src/ tests/
+
+      - name: Ruff Format (check style)
+        run: uv run ruff format src/ tests/ --check
 
       - name: Black (formatting check)
         run: uv run black src/ tests/ --check
