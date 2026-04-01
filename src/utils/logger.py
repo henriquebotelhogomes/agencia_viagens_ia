@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from typing import Any, List
 
 from loguru import logger
 
@@ -17,7 +18,7 @@ LOG_FORMAT = (
 )
 
 
-def setup_logger():
+def setup_logger() -> Any:
     """
     Configura o logger padrão da aplicação.
     Remove o handler padrão (stdout) e adiciona um com formatação customizada
@@ -48,11 +49,11 @@ class StreamlitSink:
     Ele atualiza um placeholder ou o session_state em tempo real.
     """
 
-    def __init__(self, placeholder):
+    def __init__(self, placeholder: Any) -> None:
         self.placeholder = placeholder
-        self.logs = []
+        self.logs: List[str] = []
 
-    def write(self, message):
+    def write(self, message: str) -> None:
         # O Loguru envia a mensagem já formatada
         self.logs.append(message)
         # Mantém apenas os últimos 5000 caracteres
@@ -61,7 +62,7 @@ class StreamlitSink:
         self.placeholder.code(log_text, language="text")
 
 
-def add_streamlit_sink(placeholder):
+def add_streamlit_sink(placeholder: Any) -> int:
     """
     Adiciona um sink dinâmico para o Streamlit.
     Útil para exibir o raciocínio dos agentes na UI.
