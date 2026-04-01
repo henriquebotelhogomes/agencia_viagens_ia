@@ -19,7 +19,9 @@ class CacheService:
                 self.client.ping()
                 logger.info("🟢 Redis Cache Service configurado com sucesso.")
             except Exception as e:
-                logger.warning(f"🔴 Falha ao conectar no Redis. Fallback. Erro: {e}")
+                logger.warning(
+                    f"🔴 Falha ao conectar no Redis (DNS ou Rede). Fallback para No-Cache. Erro: {e}"
+                )
                 self.enabled = False
 
     def _generate_key(

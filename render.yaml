@@ -24,4 +24,5 @@ services:
   - type: redis
     name: cache-redis
     plan: free
+    region: ohio
     ipAllowList: [] # Permite conexões internas no Render
