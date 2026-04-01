@@ -1,107 +1,89 @@
-![Tests](https://github.com/henriquebotelhogomes/agencia_viagens_ia/actions/workflows/ci.yml/badge.svg)
-![Python Version](https://img.shields.io/badge/python-3.12-blue.svg)
-![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)
-![Linter: Ruff](https://img.shields.io/badge/linter-ruff-red.svg)
-![Types: Mypy](https://img.shields.io/badge/types-mypy%20(strict)-green.svg)
-![Coverage](https://codecov.io/gh/henriquebotelhogomes/agencia_viagens_ia/branch/main/graph/badge.svg)
-![Coverage](https://codecov.io/gh/henriquebotelhogomes/agencia_viagens_ia/branch/main/graph/badge.svg)
+# ✈️ Agência de Viagens Multiagentes: Engenharia de IA em Produção
 
-# ✈️ Agência de Viagens Multiagentes com IA (Agentic RAG)
+[![CI/CD Pipeline](https://github.com/henriquebotelhogomes/agencia_viagens_ia/actions/workflows/ci.yml/badge.svg)](https://github.com/henriquebotelhogomes/agencia_viagens_ia/actions)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
+[![Linter: Ruff](https://img.shields.io/badge/linter-ruff-red.svg)](https://github.com/astral-sh/ruff)
+[![Cloud: Render](https://img.shields.io/badge/cloud-render-000000.svg)](https://render.com/)
 
-Um sistema de planejamento de viagens totalmente autônomo, construído com arquitetura de múltiplos agentes de Inteligência Artificial. O projeto orquestra especialistas virtuais para pesquisar, calcular custos, gerar roteiros e mapear atrações geograficamente em tempo real.
+> **Live Demo:** [agencia-viagens-ia.onrender.com](https://agencia-viagens-ia.onrender.com/)
 
-## 🎯 Destaques Técnicos (Para Recrutadores e Tech Leads)
+---
 
-Este projeto foi desenvolvido com foco em Engenharia de IA e Maturidade de Software, indo muito além de chamadas simples de API:
+## 🗺️ A Jornada: Por que este projeto existe?
 
-* **Orquestração Multiagente**: Utilização do ```CrewAI``` para dividir tarefas complexas entre 3 agentes especializados (Pesquisador, Analista Financeiro e Redator), evitando alucinações e garantindo precisão.
+Planejar uma viagem costuma ser um processo fragmentado: você pula de aba em aba no navegador, tenta conciliar preços de voos com atrações turísticas e, no fim, ainda se pergunta se o roteiro é logisticamente viável. As IAs genéricas (como o ChatGPT) ajudam, mas frequentemente alucinam sobre horários, locais que já fecharam ou preços desatualizados.
 
-* **Extração Pós-Processamento (NLP)**: Uso do ```LangChain``` para extrair entidades geográficas (nomes de locais) de textos não-estruturados (Markdown) e convertê-los em JSON validado para plotagem.
+Minha meta aqui foi construir um **sistema autônomo e confiável**. Este projeto não é apenas um "wrapper" de API; é uma orquestração de agentes especializados que pesquisam em tempo real, validam dados geográficos e monitoram o custo da operação (FinOps).
 
-* **Integração Geoespacial Automática**: Conversão de endereços em coordenadas (```Geopy```) e renderização de mapas interativos (```Folium```) em tempo real.
+## 🛠️ Arquitetura e Decisões de Engenharia
 
-* **Auditoria de Custos (FinOps)**: Implementação de um painel nativo que calcula o consumo exato de tokens (Input/Output) e demonstra a viabilidade económica da aplicação, comparando os custos do modelo Open-Source (Llama 3 via Groq) com modelos proprietários.
+Em vez de uma única chamada longa para um modelo de linguagem, utilizei o **CrewAI** para dividir o problema em personas distintas. Isso reduz drasticamente as alucinações e permite que cada agente use ferramentas específicas.
 
-* **Arquitetura Limpa**: Separação de responsabilidades clara entre Interface (```app.py```), Configuração de Agentes (```agents.py```) e Definição de Tarefas (```tasks.py```).
-
-## ✨ Funcionalidades
-
-1. **Roteiro Personalizado**: Geração de um itinerário dia a dia com base no destino, origem, duração e interesses específicos do usuário.
-
-2. **Pesquisa em Tempo Real**: Agentes conectados à internet via ```Serper API``` para buscar preços e atrações atualizadas.
-
-3. **Mapa Interativo**: Mapeamento automático (Pins) de todos os hotéis, restaurantes e pontos turísticos sugeridos no roteiro.
-
-4. **Exportação**: Opção de download do roteiro em formato Markdown (```.md```).
-
-5. **Logs em Tempo Real**: Observabilidade total do "raciocínio" da IA exibido diretamente na interface (Streaming do Console).
-
-## 🏗️ Como a Arquitetura Funciona
-
-O projeto utiliza um processo Sequencial de agentes:
-
-1. 🕵️‍♂️ **Guia Local (Pesquisador)**: Focado em buscar atrações locais e restaurantes autênticos que fujam de armadilhas para turistas.
-
-2. 📊 **Analista de Custos (Logística)**: Recolhe estimativas de voos e hotéis para garantir que o roteiro é financeiramente realista.
-
-3. ✍️ **Arquiteto de Roteiros (Editor Final)**: Sintetiza as pesquisas brutas num documento Markdown elegante, conciso e bem formatado.
-
-## 🛠️ Tecnologias Utilizadas
-
-* **Frontend**:  [Streamlit](https://streamlit.io/) + Streamlit-Folium
-
-* **Framework de Agentes**: [CrewAI](https://www.crewai.com/)
-
-* **LLM (Raciocínio)**: Llama 3.3 70B (Via [Groq API](https://groq.com/) para inferência ultra-rápida)
-
-* **LLM (Extração de Dados)**: Llama 3.1 8B + [LangChain](https://www.langchain.com/)
-
-* **Ferramenta de Busca**: Google Search (Via [Serper.dev](https://serper.dev/))
-
-* **Geolocalização**: Geopy (Nominatim) + [Folium](https://python-visualization.github.io/folium/)
-
-## 🚀 Como Executar o Projeto Localmente
-
-**Pré-requisitos**
-
-* Python 3.10 ou superior.
-
-* Chave de API do **Groq** (Gratuita).
-
-* Chave de API do **Serper.dev** (Gratuita para os primeiros 2500 requests).
-
-## Instalação
-
-1. Clone este repositório:
-```
-git clone [https://github.com/SEU_USUARIO/agencia-viagens-ia.git](https://github.com/SEU_USUARIO/agencia-viagens-ia.git)
-cd agencia-viagens-ia
+```mermaid
+graph TD
+    User((Usuário)) --> Streamlit[Frontend Streamlit]
+    Streamlit --> Crew[CrewAI Orchestrator]
+    
+    subgraph Agents
+        A1[🕵️ Guia Local]
+        A2[📊 Analista de Custos]
+        A3[✍️ Editor de Roteiro]
+    end
+    
+    Crew --> Agents
+    Agents --> Tools[Serper API / Search]
+    
+    subgraph Backend Services
+        Redis[(Redis Cache)]
+        Loguru[Loguru Observability]
+    end
+    
+    Crew <--> Redis
+    Streamlit <--> Loguru
+    
+    Agents --> Output[Roteiro Final Markdown]
+    Output --> Map[Mapa Interativo Folium]
 ```
 
-2. Crie e ative um ambiente virtual:
-```
-python -m venv venv
-# No Windows:
-venv\Scripts\activate
-# No Linux/Mac:
-source venv/bin/activate
-```
+### Onde foquei minha energia (Destaques Técnicos):
 
-3. Instale as dependências necessárias:
-```
-pip install -r requirements.txt
-```
+- **Orquestração Inteligente (CrewAI)**: Os agentes não trabalham isolados. O *Guia Local* descobre os pontos, o *Analista de Custos* valida se cabem no orçamento e o *Editor* garante que o Markdown final seja impecável.
+- **Eficiência com Redis (FinOps)**: Consultas repetidas para o mesmo destino não precisam queimar créditos de API nem tempo de LLM. Implementei uma camada de cache com **Redis** que salva roteiros gerados, reduzindo drasticamente a latência e o custo operacional.
+- **Geolocalização em Tempo Real**: Utilizo `Geopy` e `Folium` para extrair nomes de locais do texto gerado e plotá-los automaticamente em um mapa interativo. Se o agente menciona um restaurante, ele aparece no mapa.
+- **Infraestrutura como Código (DevOps)**: O projeto é 100% dockerizado e utiliza o `uv` para gestão de dependências. O pipeline de **CI/CD** no GitHub Actions valida o linting (Ruff) e o build do Docker a cada push, garantindo deploys seguros no **Render**.
 
-4. Configure as Variáveis de Ambiente:
-Crie um arquivo chamado .env na raiz do projeto e adicione as suas chaves:
-```
-GROQ_API_KEY=sua_chave_groq_aqui
-SERPER_API_KEY=sua_chave_serper_aqui
-```
+## 🚀 Stack Tecnológica
 
-5. Execute a aplicação:
-```
-streamlit run app.py
-```
+| Camada | Tecnologias |
+| :--- | :--- |
+| **IA & LLM** | CrewAI, Llama 3.3 (Groq), LangChain, Google Gemini |
+| **Backend & Cache** | Python 3.12, Redis, Pydantic (Settings) |
+| **Frontend** | Streamlit, Folium (Mapas), Geopy |
+| **DevOps** | Docker, GitHub Actions, Ruff (Lint), render.yaml (IaC), uv |
+| **Observabilidade** | Loguru (Logs Estruturados), FinOps (Custo/Token) |
 
-O sistema estará disponível no seu navegador em ```http://localhost:8501```.
+## 💻 Como rodar na sua máquina
+
+Diferente de outros projetos que levam minutos para configurar o ambiente, aqui eu uso o **uv** para garantir que tudo seja instantâneo e isolado.
+
+1.  **Clone o Repo:**
+    ```bash
+    git clone https://github.com/henriquebotelhogomes/agencia_viagens_ia
+    cd agencia_viagens_ia
+    ```
+
+2.  **Configure o .env:**
+    Use o `.env.example` como base para suas chaves da Groq e Serper.
+
+3.  **Rode com um comando:**
+    Se tiver o `uv` instalado:
+    ```bash
+    uv run streamlit run app.py
+    ```
+    Ou via Docker:
+    ```bash
+    docker-compose up
+    ```
+
+---
+*Desenvolvido por [Henrique Botelho Gomes](https://github.com/henriquebotelhogomes) - Focado em Engenharia de IA e Sistemas Distribuídos.*
