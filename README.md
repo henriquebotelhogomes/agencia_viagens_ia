@@ -52,6 +52,14 @@ graph TD
 - **Geolocalização em Tempo Real**: Utilizo `Geopy` e `Folium` para extrair nomes de locais do texto gerado e plotá-los automaticamente em um mapa interativo. Se o agente menciona um restaurante, ele aparece no mapa.
 - **Infraestrutura como Código (DevOps)**: O projeto é 100% dockerizado e utiliza o `uv` para gestão de dependências. O pipeline de **CI/CD** no GitHub Actions valida o linting (Ruff) e o build do Docker a cada push, garantindo deploys seguros no **Render**.
 
+## ✨ Funcionalidades em Destaque
+
+- **Roteiro Personalizado**: Geração de um itinerário dia a dia com base no destino, origem, duração e interesses específicos do usuário.
+- **Pesquisa em Tempo Real**: Agentes conectados à internet via **Serper API** para buscar preços e atrações atualizadas.
+- **Mapa Interativo**: Mapeamento automático (Pins) de todos os hotéis, restaurantes e pontos turísticos sugeridos no roteiro.
+- **Exportação**: Opção de download do roteiro pronto em formato **Markdown (.md)**.
+- **Logs em Tempo Real**: Observabilidade total do "raciocínio" da IA exibido diretamente na interface (Streaming do Console).
+
 ## 🚀 Stack Tecnológica
 
 | Camada | Tecnologias |
@@ -66,6 +74,13 @@ graph TD
 
 Diferente de outros projetos que levam minutos para configurar o ambiente, aqui eu uso o **uv** para garantir que tudo seja instantâneo e isolado.
 
+### 1. Pré-requisitos (APIs)
+Para o funcionamento pleno, você precisará de chaves para:
+- **GROQ_API_KEY**: Processamento ultra-rápido dos agentes.
+- **SERPER_API_KEY**: Busca de dados reais na web.
+- **GOOGLE_API_KEY**: Extração e fallback de modelos Gemini.
+
+### 2. Instalação
 1.  **Clone o Repo:**
     ```bash
     git clone https://github.com/henriquebotelhogomes/agencia_viagens_ia
@@ -73,7 +88,12 @@ Diferente de outros projetos que levam minutos para configurar o ambiente, aqui 
     ```
 
 2.  **Configure o .env:**
-    Use o `.env.example` como base para suas chaves da Groq e Serper.
+    Crie um arquivo `.env` na raiz (baseado no `.env.example`) com suas chaves:
+    ```env
+    GROQ_API_KEY=sua_chave_aqui
+    SERPER_API_KEY=sua_chave_aqui
+    GOOGLE_API_KEY=sua_chave_aqui
+    ```
 
 3.  **Rode com um comando:**
     Se tiver o `uv` instalado:
