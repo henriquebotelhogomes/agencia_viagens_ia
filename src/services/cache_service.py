@@ -24,7 +24,9 @@ class CacheService:
                 )
                 self.enabled = False
 
-    def _generate_key(self, origin: str, destination: str, duration: int, interests: str) -> str:
+    def _generate_key(
+        self, origin: str, destination: str, duration: int, interests: str
+    ) -> str:
         """Gera um hash único baseado nos parâmetros de busca da viagem."""
         raw_key = (
             f"{origin.lower().strip()}_{destination.lower().strip()}_"
