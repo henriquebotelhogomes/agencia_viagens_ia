@@ -23,6 +23,7 @@ dependencies = [
     "pydantic-settings",
     "google-generativeai>=0.8.6",
     "loguru",
+    "redis",
 ]
 
 [dependency-groups]

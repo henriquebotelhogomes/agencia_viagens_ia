@@ -130,10 +130,12 @@ appdirs==1.4.4 ; sys_platform == 'linux' or sys_platform == 'win32' \
     --hash=sha256:7d5d0167b2b1ba821647616af46a749d1c653740dd0d2415100fe26e27afdf41 \
     --hash=sha256:a841dacd6b99318a741b166adb07e19ee71a274450e68237b4650ca1055ab128
     # via crewai
-async-timeout==5.0.1 ; (python_full_version < '3.11' and sys_platform == 'linux') or (python_full_version < '3.11' and sys_platform == 'win32') \
+async-timeout==5.0.1 ; (python_full_version < '3.11.3' and sys_platform == 'linux') or (python_full_version < '3.11.3' and sys_platform == 'win32') \
     --hash=sha256:39e3809566ff85354557ec2398b55e096c8364bacac9405a7a1fa429e77fe76c \
     --hash=sha256:d9321a7a3d5a6a5e187e824d2fa0793ce379a202935782d555d6e9d2735677d3
-    # via aiohttp
+    # via
+    #   aiohttp
+    #   redis
 attrs==26.1.0 ; sys_platform == 'linux' or sys_platform == 'win32' \
     --hash=sha256:c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309 \
     --hash=sha256:d03ceb89cb322a8fd706d4fb91940737b6642aa36998fe130a9bc96c985eff32
@@ -2771,6 +2773,10 @@ pyyaml==6.0.3 ; sys_platform == 'linux' or sys_platform == 'win32' \
     #   langchain-core
     #   pre-commit
     #   uvicorn
+redis==7.4.0 ; sys_platform == 'linux' or sys_platform == 'win32' \
+    --hash=sha256:64a6ea7bf567ad43c964d2c30d82853f8df927c5c9017766c55a1d1ed95d18ad \
+    --hash=sha256:a9c74a5c893a5ef8455a5adb793a31bb70feb821c86eccb62eebef5a19c429ec
+    # via agencia-viagens-ia
 referencing==0.37.0 ; sys_platform == 'linux' or sys_platform == 'win32' \
     --hash=sha256:381329a9f99628c9069361716891d34ad94af76e461dcb0335825aecc7692231 \
     --hash=sha256:44aefc3142c5b842538163acb373e24cce6632bd54bdb01b21ad5863489f50d8
