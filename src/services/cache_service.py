@@ -19,9 +19,7 @@ class CacheService:
                 self.client.ping()
                 logger.info("🟢 Redis Cache Service configurado com sucesso.")
             except Exception as e:
-                logger.warning(
-                    f"🔴 Falha ao conectar no Redis. Fallback. Erro: {e}"
-                )
+                logger.warning(f"🔴 Falha ao conectar no Redis. Fallback. Erro: {e}")
                 self.enabled = False
 
     def _generate_key(
@@ -66,6 +64,7 @@ class CacheService:
             logger.info("💾 Roteiro salvo no cache do Redis.")
         except Exception as e:
             logger.error(f"⚠️ Erro ao salvar no Redis: {e}")
+
 
 # Singleton instance
 cache_service = CacheService()
