@@ -3,6 +3,8 @@
 ![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)
 ![Linter: Ruff](https://img.shields.io/badge/linter-ruff-red.svg)
 ![Types: Mypy](https://img.shields.io/badge/types-mypy%20(strict)-green.svg)
+![Coverage](https://codecov.io/gh/henriquebotelhogomes/agencia_viagens_ia/branch/main/graph/badge.svg)
+![Coverage](https://codecov.io/gh/henriquebotelhogomes/agencia_viagens_ia/branch/main/graph/badge.svg)
 
 # ✈️ Agência de Viagens Multiagentes com IA (Agentic RAG)
 
