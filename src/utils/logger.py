@@ -16,6 +16,7 @@ LOG_FORMAT = (
     "<level>{message}</level>"
 )
 
+
 def setup_logger():
     """
     Configura o logger padrão da aplicação.
@@ -26,12 +27,7 @@ def setup_logger():
     logger.remove()
 
     # Adiciona saída para Console (Terminal) com Cores
-    logger.add(
-        sys.stderr,
-        format=LOG_FORMAT,
-        level="INFO",
-        colorize=True
-    )
+    logger.add(sys.stderr, format=LOG_FORMAT, level="INFO", colorize=True)
 
     # Adiciona persistência em arquivo (Rotação de 10MB / Retenção de 10 dias)
     logger.add(
@@ -40,16 +36,18 @@ def setup_logger():
         retention="10 days",
         format=LOG_FORMAT,
         level="DEBUG",
-        encoding="utf-8"
+        encoding="utf-8",
     )
 
     return logger
+
 
 class StreamlitSink:
     """
     Sink customizado para integrar o Loguru com o Streamlit.
     Ele atualiza um placeholder ou o session_state em tempo real.
     """
+
     def __init__(self, placeholder):
         self.placeholder = placeholder
         self.logs = []
@@ -60,6 +58,7 @@ class StreamlitSink:
         # Mantém apenas os últimos 5000 caracteres para não estourar a memória do browser
         log_text = "".join(self.logs)[-5000:]
         self.placeholder.code(log_text, language="text")
+
 
 def add_streamlit_sink(placeholder):
     """

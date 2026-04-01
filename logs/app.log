@@ -5,3 +5,5 @@
 2026-04-01 13:34:35 | INFO     | tests.test_logger_integration:test_logger_flow:41 - Outra mensagem para FinOps
 2026-04-01 13:34:37 | INFO     | __main__:test_logger_flow:30 - Mensagem de Teste para o Agente
 2026-04-01 13:34:37 | INFO     | __main__:test_logger_flow:41 - Outra mensagem para FinOps
+2026-04-01 13:35:45 | INFO     | __main__:<module>:15 - Aplicação Iniciada.
+2026-04-01 13:35:45 | INFO     | __main__:<module>:82 - Iniciando planejamento para Goiânia, Goiás...

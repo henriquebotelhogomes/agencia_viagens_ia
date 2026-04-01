@@ -17,6 +17,7 @@ class MockPlaceholder:
     def code(self, content, language="text"):
         self.output = content
 
+
 def test_logger_flow():
     # 1. Configura
     setup_logger()
@@ -47,6 +48,7 @@ def test_logger_flow():
     logger.remove(sink_id)
     logger.remove(buf_id)
     print("✓ Cleanup successful.")
+
 
 if __name__ == "__main__":
     try:

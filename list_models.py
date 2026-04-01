@@ -10,10 +10,11 @@ def list_gemini_models():
         models = genai.list_models()
         print("\nAvailable Models for this Key:")
         for m in models:
-            if 'generateContent' in m.supported_generation_methods:
+            if "generateContent" in m.supported_generation_methods:
                 print(f"- {m.name}")
     except Exception as e:
         print(f"\nError listing models: {e}")
+
 
 if __name__ == "__main__":
     list_gemini_models()
