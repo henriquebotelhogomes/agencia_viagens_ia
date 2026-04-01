@@ -12,8 +12,8 @@ os.environ["GEMINI_API_KEY"] = settings.google_api_key
 # Configuração de Robustez para LiteLLM
 import litellm
 
-litellm.set_verbose = True  # Gera logs detalhados para debug do loop de evento e 503s
-litellm.drop_params = True   # Remove parâmetros não suportados por provedores secundários
+litellm.set_verbose = True  # Logs para debug do loop de evento e 503s
+litellm.drop_params = True  # Remove parâmetros não suportados
 
 
 class TravelAgents:
@@ -28,7 +28,7 @@ class TravelAgents:
             api_key=self.settings.groq_api_key,
             temperature=0.3,
             max_retries=2,
-            # Cadeia de Fallback: Groq 70B -> Gemini Flash (Rápido) -> Groq 8B -> Gemini Pro (Potente)
+            # Fallback: Groq 70B -> Gemini Flash -> Groq 8B -> Gemini Pro
             fallbacks=[
                 {
                     "model": "gemini/gemini-1.5-flash",
