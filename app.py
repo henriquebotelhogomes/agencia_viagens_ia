@@ -145,7 +145,7 @@ if submitted:
                                 icon=folium.Icon(color="red", icon="star"),
                             ).add_to(m)
 
-                            # Processa locais do roteiro 
+                            # Processa locais do roteiro
                             # (com cache para não repetir chamadas caras)
                             locais = get_itinerary_map_data(roteiro_str)
 
@@ -175,18 +175,7 @@ if submitted:
             with tab3:
                 st.markdown("### 📊 Análise de Custos e Performance")
 
-                # Agora as estatísticas podem vir do logger ou continuar via logs textuais refinados
-                # Como a decisão foi manter agregado, vamos manter a lógica, mas agora capturando de forma mais limpa
-                current_logs = (
-                    log_placeholder.get_label()
-                    if hasattr(log_placeholder, "get_label")
-                    else "Logs indisponíveis"
-                )
-                stats = fin_service.estimate_costs(current_logs)
-                # NOTA: Como o log_placeholder sumiu ao fim, precisamos garantir o acesso ao texto.
-                # Vamos ajustar a lógica para o FinanceService processar os logs do arquivo se necessário.
-
-                # Agora usamos o buffer capturado especificamente para esta rodada
+                # Usamos o buffer capturado especificamente para esta rodada
                 try:
                     stats = fin_service.estimate_costs(logs_for_finops)
                 except Exception as e:

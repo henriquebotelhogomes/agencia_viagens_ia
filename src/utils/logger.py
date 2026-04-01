@@ -55,7 +55,7 @@ class StreamlitSink:
     def write(self, message):
         # O Loguru envia a mensagem já formatada
         self.logs.append(message)
-        # Mantém apenas os últimos 5000 caracteres 
+        # Mantém apenas os últimos 5000 caracteres
         # para não estourar a memória do browser
         log_text = "".join(self.logs)[-5000:]
         self.placeholder.code(log_text, language="text")
