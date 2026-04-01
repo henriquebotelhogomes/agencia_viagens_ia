@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     # Configurações de Modelos e Preços
     model_pro: str = "groq/llama-3.3-70b-versatile"
     model_fast: str = "groq/llama-3.1-8b-instant"
-    model_extractor: str = "llama-3.1-8b-instant"
+    model_extractor: str = "llama-3.3-70b-versatile"
     model_pro_fallback: str = "gemini/gemini-flash-latest"
     model_fast_fallback: str = "gemini/gemini-flash-latest"
 

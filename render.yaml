@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: agencia-viagens-ia
+    runtime: docker
+    plan: free
+    region: ohio # Ou outra região de sua preferência
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false # Você precisará preencher no dashboard do Render
+      - key: SERPER_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: UV_COMPILE_BYTECODE
+        value: "1"
+      - key: PYTHON_VERSION
+        value: "3.12"

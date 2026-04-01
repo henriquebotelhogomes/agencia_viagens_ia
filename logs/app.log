@@ -59,3 +59,18 @@ Exception: litellm.ServiceUnavailableError: GeminiException - {
 . All fallback attempts failed. Enable verbose logging with `litellm.set_verbose=True` for details.
 
 2026-04-01 14:11:36 | INFO     | __main__:<module>:108 - Processamento Finalizado.
+2026-04-01 14:29:52 | INFO     | __main__:<module>:15 - Aplicação Iniciada.
+2026-04-01 14:29:58 | INFO     | __main__:<module>:15 - Aplicação Iniciada.
+2026-04-01 14:30:30 | INFO     | __main__:<module>:15 - Aplicação Iniciada.
+2026-04-01 14:30:30 | INFO     | __main__:<module>:109 - Iniciando planejamento para Goiânia, Goiás...
+2026-04-01 14:31:04 | INFO     | __main__:<module>:126 - Processamento Finalizado.
+2026-04-01 14:31:32 | INFO     | __main__:<module>:15 - Aplicação Iniciada.
+2026-04-01 14:32:11 | INFO     | __main__:<module>:15 - Aplicação Iniciada.
+2026-04-01 14:32:15 | INFO     | __main__:<module>:15 - Aplicação Iniciada.
+2026-04-01 14:32:15 | INFO     | __main__:<module>:109 - Iniciando planejamento para Goiânia, Goiás...
+2026-04-01 14:32:47 | INFO     | __main__:<module>:126 - Processamento Finalizado.
+2026-04-01 14:37:12 | INFO     | __main__:<module>:15 - Aplicação Iniciada.
+2026-04-01 14:37:22 | INFO     | __main__:<module>:15 - Aplicação Iniciada.
+2026-04-01 14:37:35 | INFO     | __main__:<module>:15 - Aplicação Iniciada.
+2026-04-01 14:37:35 | INFO     | __main__:<module>:115 - Iniciando planejamento para Goiânia, Goiás...
+2026-04-01 14:37:53 | INFO     | __main__:<module>:132 - Processamento Finalizado.

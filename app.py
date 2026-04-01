@@ -41,7 +41,13 @@ fin_service = get_finance_service()
 # Funções Auxiliares de Cache
 @st.cache_data
 def get_itinerary_map_data(itinerary_str: str):
-    return geo_service.process_itinerary_locations(itinerary_str)
+    locais_objs = geo_service.process_itinerary_locations(itinerary_str)
+    # Convertemos para dicionários para evitar erros de serialização (Pickle)
+    return [
+        {"name": loc.name, "lat": loc.lat, "lon": loc.lon}
+        for loc in locais_objs
+        if loc.lat and loc.lon
+    ]
 
 
 # Interface Principal
@@ -170,8 +176,8 @@ if submitted:
                             if locais:
                                 for loc in locais:
                                     folium.Marker(
-                                        [loc.lat, loc.lon],
-                                        popup=f"<b>{loc.name}</b>",
+                                        [loc["lat"], loc["lon"]],
+                                        popup=f"<b>{loc['name']}</b>",
                                         icon=folium.Icon(
                                             color="blue", icon="info-sign"
                                         ),
