@@ -105,5 +105,7 @@ Para o funcionamento pleno, você precisará de chaves para:
     docker-compose up
     ```
 
+A aplicação estará disponível em seu navegador no endereço: **[http://localhost:8501](http://localhost:8501)**
+
 ---
-*Desenvolvido por [Henrique Botelho Gomes](https://github.com/henriquebotelhogomes) - Focado em Engenharia de IA e Sistemas Distribuídos.*
+*Desenvolvido por **[Henrique Botelho Gomes](https://www.linkedin.com/in/henriquebotelhogomes/)** - Focado em Engenharia de IA e Sistemas Distribuídos.*
