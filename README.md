@@ -1,3 +1,9 @@
+![Tests](https://github.com/henriquebotelhogomes/agencia_viagens_ia/actions/workflows/ci.yml/badge.svg)
+![Python Version](https://img.shields.io/badge/python-3.12-blue.svg)
+![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)
+![Linter: Ruff](https://img.shields.io/badge/linter-ruff-red.svg)
+![Types: Mypy](https://img.shields.io/badge/types-mypy%20(strict)-green.svg)
+
 # ✈️ Agência de Viagens Multiagentes com IA (Agentic RAG)
 
 Um sistema de planejamento de viagens totalmente autônomo, construído com arquitetura de múltiplos agentes de Inteligência Artificial. O projeto orquestra especialistas virtuais para pesquisar, calcular custos, gerar roteiros e mapear atrações geograficamente em tempo real.
