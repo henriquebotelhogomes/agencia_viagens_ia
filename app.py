@@ -8,7 +8,7 @@ from streamlit_folium import st_folium
 from src.crew_builder import CrewBuilder
 from src.services.finance_service import FinanceService
 from src.services.geocoding_service import GeocodingService
-from src.utils.logger import add_streamlit_sink, setup_logger
+from src.utils.logger import LOG_DIR, add_streamlit_sink, setup_logger
 
 # Configuração do Logger Centralizado
 logger = setup_logger()
@@ -38,14 +38,26 @@ geo_service = get_geocoding_service()
 fin_service = get_finance_service()
 
 
-# Funções Auxiliares de Cache
-@st.cache_data
-def get_itinerary_map_data(itinerary_str: str):
-    return geo_service.process_itinerary_locations(itinerary_str)
-
-
 # Interface Principal
 st.title("✈️ Agência de Viagens Inteligente")
+
+# Barra Lateral: Ferramentas e Logs
+with st.sidebar:
+    st.header("🛠️ Utilitários")
+    try:
+        log_path = LOG_DIR / "app.log"
+        if log_path.exists():
+            with open(log_path, "rb") as f:
+                st.download_button(
+                    label="📥 Baixar Logs Completos (.log)",
+                    data=f,
+                    file_name="agencia_viagens_ia.log",
+                    mime="text/plain",
+                    use_container_width=True,
+                )
+    except Exception as e:
+        st.sidebar.error(f"Erro ao carregar logs: {e}")
+
 st.markdown("""
 Esta equipe de Agentes de IA utiliza **Agentic RAG** para planejar sua viagem,
 pesquisando dados em tempo real e otimizando custos.

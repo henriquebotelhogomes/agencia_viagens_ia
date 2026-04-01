@@ -6,9 +6,14 @@ from crewai_tools import SerperDevTool
 
 from src.config import settings
 
-# Injeta a chave do Google no ambiente para o LiteLLM (Plano B)
 os.environ["GOOGLE_API_KEY"] = settings.google_api_key
 os.environ["GEMINI_API_KEY"] = settings.google_api_key
+
+# Configuração de Robustez para LiteLLM
+import litellm
+
+litellm.set_verbose = True  # Gera logs detalhados para debug do loop de evento e 503s
+litellm.drop_params = True   # Remove parâmetros não suportados por provedores secundários
 
 
 class TravelAgents:
@@ -23,15 +28,19 @@ class TravelAgents:
             api_key=self.settings.groq_api_key,
             temperature=0.3,
             max_retries=2,
-            # Plano B e C configurados via fallbacks com chaves explícitas
+            # Cadeia de Fallback: Groq 70B -> Gemini Flash (Rápido) -> Groq 8B -> Gemini Pro (Potente)
             fallbacks=[
                 {
-                    "model": self.settings.model_pro_fallback,
+                    "model": "gemini/gemini-1.5-flash",
                     "api_key": self.settings.google_api_key,
                 },
                 {
                     "model": "groq/llama-3.1-8b-instant",
                     "api_key": self.settings.groq_api_key,
+                },
+                {
+                    "model": self.settings.model_pro_fallback,
+                    "api_key": self.settings.google_api_key,
                 },
             ],
         )
@@ -42,14 +51,19 @@ class TravelAgents:
             api_key=self.settings.groq_api_key,
             temperature=0.2,
             max_retries=2,
+            # Cadeia de Fallback: Groq 8B -> Gemini Flash -> Gemini Pro -> Groq 70B
             fallbacks=[
                 {
-                    "model": self.settings.model_fast_fallback,
+                    "model": "gemini/gemini-1.5-flash",
                     "api_key": self.settings.google_api_key,
                 },
                 {
                     "model": self.settings.model_pro_fallback,
                     "api_key": self.settings.google_api_key,
+                },
+                {
+                    "model": self.settings.model_pro,
+                    "api_key": self.settings.groq_api_key,
                 },
             ],
         )
