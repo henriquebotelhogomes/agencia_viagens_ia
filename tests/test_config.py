@@ -12,14 +12,13 @@ def test_settings_load_from_env(mock_settings):
     assert mock_settings.SERPER_API_KEY == "mock_serper_key"
 
 
-def test_settings_missing_required_env_var(mocker):
+def test_settings_default_empty_values(mocker):
     """
-    Testa se um erro é levantado quando uma variável de ambiente
-    obrigatória está faltando.
+    Testa se as chaves de API iniciam vazias por padrão (comportamento resiliente).
     """
     mocker.patch.dict(os.environ, {}, clear=True)
-    from pydantic import ValidationError
-
-    with pytest.raises(ValidationError):
-        # Passar _env_file=None para evitar que ele leia o arquivo .env real do projeto
-        Settings(_env_file=None)
+    # Passar _env_file=None para evitar que ele leia o arquivo .env real do projeto
+    s = Settings(_env_file=None)
+    assert s.GROQ_API_KEY == ""
+    assert s.SERPER_API_KEY == ""
+    assert s.GOOGLE_API_KEY == ""
