@@ -15,3 +15,47 @@
 2026-04-01 14:09:14 | INFO     | __main__:<module>:15 - Aplicação Iniciada.
 2026-04-01 14:09:47 | INFO     | __main__:<module>:15 - Aplicação Iniciada.
 2026-04-01 14:09:47 | INFO     | __main__:<module>:91 - Iniciando planejamento para Goiânia, Goiás...
+2026-04-01 14:11:36 | ERROR    | __main__:<module>:101 - Erro na orquestração: litellm.APIConnectionError: litellm.ServiceUnavailableError: GeminiException - {
+  "error": {
+    "code": 503,
+    "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+    "status": "UNAVAILABLE"
+  }
+}
+. All fallback attempts failed. Enable verbose logging with `litellm.set_verbose=True` for details.
+Traceback (most recent call last):
+  File "C:\Users\henri\OneDrive\Documents\python_projects\agencia_viagens_ia\.venv\Lib\site-packages\litellm\litellm_core_utils\asyncify.py", line 107, in run_async_function
+    _ = asyncio.get_running_loop()
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: no running event loop
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\henri\OneDrive\Documents\python_projects\agencia_viagens_ia\.venv\Lib\site-packages\litellm\main.py", line 1350, in completion
+    return completion_with_fallbacks(**args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\henri\OneDrive\Documents\python_projects\agencia_viagens_ia\.venv\Lib\site-packages\litellm\litellm_core_utils\fallback_utils.py", line 80, in completion_with_fallbacks
+    return run_async_function(async_function=async_completion_with_fallbacks, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\henri\OneDrive\Documents\python_projects\agencia_viagens_ia\.venv\Lib\site-packages\litellm\litellm_core_utils\asyncify.py", line 116, in run_async_function
+    return run_in_new_loop()
+           ^^^^^^^^^^^^^^^^^
+  File "C:\Users\henri\OneDrive\Documents\python_projects\agencia_viagens_ia\.venv\Lib\site-packages\litellm\litellm_core_utils\asyncify.py", line 100, in run_in_new_loop
+    return new_loop.run_until_complete(async_function(*args, **kwargs))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\henri\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\henri\OneDrive\Documents\python_projects\agencia_viagens_ia\.venv\Lib\site-packages\litellm\litellm_core_utils\fallback_utils.py", line 74, in async_completion_with_fallbacks
+    raise Exception(
+Exception: litellm.ServiceUnavailableError: GeminiException - {
+  "error": {
+    "code": 503,
+    "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+    "status": "UNAVAILABLE"
+  }
+}
+. All fallback attempts failed. Enable verbose logging with `litellm.set_verbose=True` for details.
+
+2026-04-01 14:11:36 | INFO     | __main__:<module>:108 - Processamento Finalizado.

@@ -38,6 +38,12 @@ geo_service = get_geocoding_service()
 fin_service = get_finance_service()
 
 
+# Funções Auxiliares de Cache
+@st.cache_data
+def get_itinerary_map_data(itinerary_str: str):
+    return geo_service.process_itinerary_locations(itinerary_str)
+
+
 # Interface Principal
 st.title("✈️ Agência de Viagens Inteligente")
 
