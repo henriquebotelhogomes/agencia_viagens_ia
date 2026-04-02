@@ -1,10 +1,15 @@
 import os
+import litellm
 from typing import Any
 
 from crewai import LLM, Agent
 from crewai_tools import SerperDevTool
 
 from src.config import settings
+
+# Desativa o cache interno do litellm que pode tentar usar o Redis automaticamente
+# Isso evita o erro de conexão persistente em ambientes como o Render.
+litellm.cache = None
 
 os.environ["GOOGLE_API_KEY"] = settings.google_api_key
 os.environ["GEMINI_API_KEY"] = settings.google_api_key

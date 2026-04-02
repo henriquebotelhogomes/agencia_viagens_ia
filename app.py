@@ -1,7 +1,21 @@
 import io
 
 import folium
+import os
+import redis
 import streamlit as st
+
+# Proactively check Redis connection before any CrewAI/litellm imports
+_redis_url = os.environ.get("REDIS_URL")
+if _redis_url:
+    try:
+        # Use a short timeout to not delay app startup significantly
+        _r = redis.from_url(_redis_url, socket_connect_timeout=1)
+        _r.ping()
+    except Exception:
+        # If Redis is unreachable, purge it from the environment immediately!
+        # This prevents other libraries from picking it up and crashing later.
+        os.environ.pop("REDIS_URL", None)
 
 # Importações do Projeto
 from src.crew_builder import CrewBuilder
