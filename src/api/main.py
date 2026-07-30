@@ -31,6 +31,7 @@ from src.runtime import configure_llm_runtime
 from src.services.progress_bus import ProgressBus
 from src.services.queue_service import close_queue
 from src.services.rate_limiter import RateLimiter
+from src.telemetry import configure_telemetry
 from src.utils.logger import setup_logger
 
 DESCRIPTION = """
@@ -48,6 +49,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     setup_logger(settings)
     configure_llm_runtime(settings)
+    configure_telemetry(settings, service_name="voyager-api", app=app)
 
     app.state.progress_bus = ProgressBus(settings)
     app.state.rate_limiter = RateLimiter(settings)
@@ -92,7 +94,15 @@ def _document_problem_responses(openapi_schema: dict[str, Any]) -> dict[str, Any
         for operation in path_item.values():
             if not isinstance(operation, dict):
                 continue
-            for status_code, response in operation.get("responses", {}).items():
+            responses = operation.get("responses", {})
+            # Corpo ilegível (JSON malformado) faz o Starlette responder 400 antes
+            # de a validação do Pydantic rodar — é distinto do 422, que já
+            # pressupõe JSON válido com campos inválidos.
+            if "requestBody" in operation:
+                responses.setdefault(
+                    "400", {"description": "Corpo da requisição não é JSON válido"}
+                )
+            for status_code, response in responses.items():
                 if status_code.isdigit() and int(status_code) >= 400:
                     response["content"] = problem_content
     return openapi_schema

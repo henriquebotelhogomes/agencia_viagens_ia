@@ -10,15 +10,17 @@ from loguru import logger
 from src.config import get_settings
 from src.runtime import configure_llm_runtime
 from src.services.queue_service import build_queue
+from src.telemetry import configure_telemetry
 from src.utils.logger import setup_logger
 from src.worker.tasks import generate_itinerary
 
 
 async def startup(ctx: dict[str, Any]) -> None:  # noqa: ARG001 - assinatura do SAQ
-    """Prepara o runtime do worker (logs, LiteLLM, chaves, Langfuse)."""
+    """Prepara o runtime do worker (logs, LiteLLM, chaves, Langfuse, OTel)."""
     app_settings = get_settings()
     setup_logger(app_settings)
     configure_llm_runtime(app_settings)
+    configure_telemetry(app_settings, service_name="voyager-worker")
     logger.info(
         f"Worker iniciado (env={app_settings.APP_ENV}, fila={app_settings.QUEUE_NAME})"
     )

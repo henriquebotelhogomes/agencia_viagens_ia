@@ -108,8 +108,13 @@ schema = schemathesis.pytest.from_fixture("contract_schema")
 
 @schema.parametrize()
 @hypothesis_settings(
-    max_examples=25,
+    # 60 exemplos por rota: acima disso o ganho marginal não paga o tempo de CI.
+    max_examples=60,
     deadline=None,
+    # Sem `derandomize`, cada execução sorteia exemplos diferentes e o teste vira
+    # flaky — uma falha aparece dias depois, sem relação com o commit. Com ele, o
+    # conjunto é determinístico: se passa aqui, passa no CI.
+    derandomize=True,
     suppress_health_check=[HealthCheck.too_slow, HealthCheck.filter_too_much],
 )
 def test_api_honra_o_contrato_openapi(case: schemathesis.Case) -> None:

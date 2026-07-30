@@ -65,9 +65,33 @@ modelo utilizado.
     - As chaves são **vinculadas à região**. Host errado retorna 401 silencioso —
       `scripts/check_env.py` detecta.
 
-## Métricas (planejado — Fase 1)
+## Traces de infraestrutura (OpenTelemetry)
 
-Com a API e o worker, entram OpenTelemetry e as métricas de plataforma:
+Complementa o Langfuse com o que acontece **fora** das chamadas de LLM:
+latência por rota HTTP, queries do SQLAlchemy, comandos Redis e o ciclo de
+vida de cada job do worker.
+
+| Aspecto | Como funciona |
+| ------- | ------------- |
+| Ativação | `OTEL_EXPORTER_OTLP_ENDPOINT` configurado; vazio = desligado, sem overhead |
+| Inicialização | Explícita, em `src/telemetry.py` — nunca no import (invariante S1) |
+| API | FastAPI instrumentado no `lifespan` (`service.name=voyager-api`) |
+| Worker | Span raiz `generate_itinerary` por job, com `voyager.execution_id` e status final (`service.name=voyager-worker`) |
+| Automáticos | SQLAlchemy e Redis instrumentados nos dois processos |
+| Autenticação | `OTEL_EXPORTER_OTLP_HEADERS` (formato `chave=valor,...`), tratado como segredo |
+
+Backends OTLP com free tier: Grafana Cloud, Honeycomb e New Relic (este último
+incluso no GitHub Student Pack). Basta apontar o endpoint e os headers.
+
+```bash
+# Exemplo: Grafana Cloud
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp-gateway-prod-us-east-0.grafana.net/otlp
+OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic <token>
+```
+
+## Métricas (próxima etapa)
+
+Com traces ativos, as métricas derivadas entram na sequência:
 
 | Métrica | Uso |
 | ------- | --- |

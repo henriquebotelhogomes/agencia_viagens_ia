@@ -25,6 +25,7 @@ _SECRET_FIELDS = (
     "GEOAPIFY_API_KEY",
     "LANGFUSE_PUBLIC_KEY",
     "LANGFUSE_SECRET_KEY",
+    "OTEL_EXPORTER_OTLP_HEADERS",
     "GROQ_API_KEY",
     "SERPER_API_KEY",
     "GOOGLE_API_KEY",
@@ -91,6 +92,16 @@ class Settings(BaseSettings):
     CACHE_TTL_SECONDS: int = 86400  # 24 horas
     # TTL longo: coordenadas de atrações turísticas raramente mudam
     GEOCODING_CACHE_TTL_SECONDS: int = 2_592_000  # 30 dias
+
+    # ------------------------------------------------------------------
+    # OpenTelemetry — traces de infraestrutura (API, worker, banco, Redis).
+    # Complementa o Langfuse (ADR-0012), que cobre só as chamadas de LLM.
+    # Vazio = telemetria desligada (degradação graciosa, sem overhead).
+    # ------------------------------------------------------------------
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = ""
+    # Autenticação do backend OTLP (ex.: "Authorization=Bearer <token>")
+    OTEL_EXPORTER_OTLP_HEADERS: SecretStr = SecretStr("")
+    OTEL_SERVICE_NAME: str = "voyager-api"
 
     # ------------------------------------------------------------------
     # LEGADO — em uso pelo playground Streamlit até concluir a Fase 0
@@ -211,6 +222,11 @@ class Settings(BaseSettings):
     @property
     def langfuse_enabled(self) -> bool:
         return bool(self.langfuse_public_key and self.langfuse_secret_key)
+
+    @property
+    def telemetry_enabled(self) -> bool:
+        """Indica se há um backend OTLP configurado para traces."""
+        return bool(self.OTEL_EXPORTER_OTLP_ENDPOINT)
 
     @property
     def opencode_enabled(self) -> bool:

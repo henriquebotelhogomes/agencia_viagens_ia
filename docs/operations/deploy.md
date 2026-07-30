@@ -98,6 +98,17 @@ heroku config:set --app voyager-ia \
 
 `APP_ENV=production` tem dois efeitos: logs em JSON e `/docs` desabilitado.
 
+### Telemetria (opcional)
+
+Para ativar os traces de infraestrutura ([OpenTelemetry](observability.md#traces-de-infraestrutura-opentelemetry)),
+aponte um backend OTLP — sem essas variáveis a telemetria fica desligada:
+
+```bash
+heroku config:set --app voyager-ia \
+  OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.exemplo.com \
+  OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer <token>"
+```
+
 ## 4. Publicar
 
 ```bash

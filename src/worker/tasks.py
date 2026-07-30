@@ -22,6 +22,7 @@ from src.services.cache_service import get_cache_service
 from src.services.finance_service import FinanceService
 from src.services.geocoding_service import GeocodingService
 from src.services.progress_bus import ProgressBus
+from src.telemetry import get_tracer
 
 # Etapas reportadas ao cliente durante a execução
 STEP_CACHE = "cache"
@@ -52,6 +53,24 @@ async def generate_itinerary(
     progress = ProgressBus(settings)
     session_factory = get_session_factory()
 
+    # Span raiz do job: liga a execução assíncrona ao trace de infraestrutura.
+    # Sem backend OTLP configurado é um no-op (tracer default não grava nada).
+    with get_tracer("voyager.worker").start_as_current_span(
+        "generate_itinerary",
+        attributes={"voyager.execution_id": execution_id},
+    ) as span:
+        status = await _run_job(exec_uuid, progress, session_factory)
+        span.set_attribute("voyager.execution_status", status)
+        return status
+
+
+async def _run_job(
+    exec_uuid: uuid.UUID,
+    progress: ProgressBus,
+    session_factory: Any,
+) -> str:
+    """Corpo do job, separado para o span raiz envolver o fluxo inteiro."""
+    execution_id = str(exec_uuid)
     async with session_factory() as session:
         execution = await session.get(Execution, exec_uuid)
         if execution is None:

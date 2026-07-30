@@ -3,7 +3,7 @@
 > **Documento de Requisitos de Produto (PRD)** — consolida a revisão estratégica do
 > projeto, as decisões tomadas e o plano de modernização da arquitetura.
 >
-> **Versão:** 1.17 · **Status:** ✅ Fases 0 e 1 concluídas · 🚀 Deploy em preparação · 📚 [Documentação](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) · **Complementa:** [`specs/`](./specs/README.md)
+> **Versão:** 1.19 · **Status:** ✅ Fases 0 e 1 concluídas · 🚀 Deploy em preparação · 📚 [Documentação](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) · **Complementa:** [`specs/`](./specs/README.md)
 
 ***
 
@@ -592,6 +592,8 @@ extração da API (Fase 0). O status é controlado no checklist da §15.
 | 1.15   | **Fase 1 concluída**: FastAPI (7 rotas, RFC 9457, SSE, idempotência, rate limit), worker SAQ, PostgreSQL + Alembic. Validada E2E na stack real (110s, 20k tokens, 8 locais). D7 revisada para SAQ (ADR-0014). 131 testes, cobertura 92% |
 | 1.16   | **D3 revisada → Heroku (ADR-0015)**: o free tier do Render não cobre background workers e apaga o Postgres em 30 dias; crédito GitHub Student (US$ 13/mês × 24 meses) sustenta a arquitetura completa. `heroku.yml` com release phase, fábrica central de clientes Redis (TLS self-signed) e normalização da `DATABASE_URL`. 147 testes, cobertura 92% |
 | 1.17   | **Testes de contrato (schemathesis)** sobre as 7 rotas da OpenAPI — encontraram e corrigiram 3 bugs reais: 405 sem header `Allow` (RFC 9110), spec do 422 divergente do envelope RFC 9457 servido, e `Idempotency-Key` vazia gerando 500 por colisão UNIQUE (+ corrida check-then-insert tratada pela constraint). 148 testes |
+| 1.18   | **OpenTelemetry na API e no worker** (última pendência técnica da Fase 1): `src/telemetry.py` com inicialização explícita e no-op sem endpoint; FastAPI/SQLAlchemy/Redis instrumentados; span raiz por job com `execution_id`. Versões alinhadas ao OTel que o CrewAI já traz (SDK 1.34.x), sem upgrade em cascata. 162 testes |
+| 1.19   | **4º bug de contrato + teste determinístico**: corpo JSON malformado produzia **400 não documentado** (o Starlette responde antes do Pydantic); a OpenAPI agora documenta 400 em toda operação com `requestBody`. O teste passou a usar `derandomize=True` com 60 exemplos/rota — sem isso a falha aparecia só às vezes, o que tornaria o CI intermitente. Estabilidade verificada em 3 execuções completas |
 
 ***
 
@@ -771,7 +773,7 @@ Controle de status das tarefas. Legenda: `[ ]` pendente · `[~]` em andamento ·
 * [x] Testes: **131 no total**, cobertura **92%** (API, worker, fila, pub/sub,
   rate limiter, banco)
 
-* [ ] OpenTelemetry na API e no worker
+* [x] OpenTelemetry na API e no worker
 
 * [x] Testes de contrato automatizados (schemathesis) sobre a OpenAPI
 

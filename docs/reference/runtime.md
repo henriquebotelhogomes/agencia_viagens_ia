@@ -35,3 +35,18 @@ O que a função faz, em ordem:
       members:
         - configure_llm_runtime
         - reset_runtime_state
+
+## Telemetria (OpenTelemetry)
+
+Mesma filosofia do runtime: inicialização explícita, idempotente e com
+degradação graciosa — sem `OTEL_EXPORTER_OTLP_ENDPOINT`, é um no-op. A API
+instrumenta o FastAPI no `lifespan`; o worker abre um span raiz por job.
+Detalhes de operação em [Observabilidade](../operations/observability.md).
+
+::: src.telemetry
+    options:
+      show_root_heading: false
+      members:
+        - configure_telemetry
+        - get_tracer
+        - reset_telemetry_state
