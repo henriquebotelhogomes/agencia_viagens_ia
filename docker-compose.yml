@@ -1,5 +1,93 @@
 services:
-  app:
+  # ---------------------------------------------------------------------------
+  # Infraestrutura (PRD D8 / ADR-0008, ADR-0014)
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: voyager
+      POSTGRES_PASSWORD: voyager
+      POSTGRES_DB: voyager
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U voyager -d voyager"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    # appendonly garante que a fila sobreviva a restart do container
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # Aplicação
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      target: runtime
+    command: >-
+      uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - APP_ENV=local
+      - DATABASE_URL=postgresql+asyncpg://voyager:voyager@postgres:5432/voyager
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  worker:
+    build:
+      context: .
+      target: runtime
+    command: >-
+      saq src.worker.settings.settings
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - APP_ENV=local
+      - DATABASE_URL=postgresql+asyncpg://voyager:voyager@postgres:5432/voyager
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Playground Streamlit (aposentado quando o frontend Next.js assumir)
+  streamlit:
+    profiles:
+      - playground
     build:
       context: .
       target: runtime
@@ -10,11 +98,13 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
-      # Compose local roda em modo dev (logs legíveis); Render usa production
       - APP_ENV=local
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      # Using Python to check health since curl might not be available in slim image
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health')"]
       interval: 10s
       timeout: 5s
@@ -32,7 +122,8 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
-    depends_on:
-      app:
-        condition: service_healthy
     command: pytest tests/ -v --cov=src
+
+volumes:
+  postgres_data:
+  redis_data:

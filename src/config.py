@@ -39,7 +39,10 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------
     APP_ENV: Literal["local", "staging", "production"] = "local"
     LOG_LEVEL: str = "INFO"
+    # Rate limiting da demo pública sem autenticação (FR-09)
     RATE_LIMIT_EXECUTIONS_PER_HOUR: int = 5
+    # Origens permitidas no CORS (separadas por vírgula). Vazio = apenas localhost.
+    CORS_ALLOWED_ORIGINS: str = ""
 
     # ------------------------------------------------------------------
     # LLM — gateway primário: OpenCode Go (PRD D2)
@@ -78,6 +81,13 @@ class Settings(BaseSettings):
     REDIS_URL: str = ""
     REDIS_CONNECT_TIMEOUT: float = 2.0
     DATABASE_URL: str = ""
+    # Pool de conexões do PostgreSQL (ADR-0008)
+    DB_POOL_SIZE: int = 5
+    DB_MAX_OVERFLOW: int = 10
+    # Fila de jobs (ADR-0014): nome, timeout de execução e concorrência do worker
+    QUEUE_NAME: str = "voyager"
+    JOB_TIMEOUT_SECONDS: int = 600
+    WORKER_CONCURRENCY: int = 2
     CACHE_TTL_SECONDS: int = 86400  # 24 horas
     # TTL longo: coordenadas de atrações turísticas raramente mudam
     GEOCODING_CACHE_TTL_SECONDS: int = 2_592_000  # 30 dias
@@ -152,12 +162,32 @@ class Settings(BaseSettings):
     # Flags derivadas — habilitam degradação graciosa por serviço
     # ------------------------------------------------------------------
     @property
+    def cors_origins(self) -> list[str]:
+        """Origens permitidas no CORS.
+
+        Sem configuração explícita, libera apenas os endereços de desenvolvimento
+        local — nunca `*`, que quebraria o uso de credenciais.
+        """
+        if self.CORS_ALLOWED_ORIGINS:
+            return [
+                origin.strip()
+                for origin in self.CORS_ALLOWED_ORIGINS.split(",")
+                if origin.strip()
+            ]
+        return ["http://localhost:3000", "http://localhost:8501"]
+
+    @property
     def is_production(self) -> bool:
         return self.APP_ENV == "production"
 
     @property
     def cache_enabled(self) -> bool:
         return bool(self.REDIS_URL)
+
+    @property
+    def database_enabled(self) -> bool:
+        """Indica se a persistência está configurada (ADR-0008)."""
+        return bool(self.DATABASE_URL)
 
     @property
     def langfuse_enabled(self) -> bool:

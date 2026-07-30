@@ -1,8 +1,14 @@
 # ADR-0007 — Fila e worker
 
-- **Status**: Aceita
+- **Status**: **Substituída por [ADR-0014](0014-fila-saq.md)**
 - **Data**: 2026-07-29
 - **Contexto do PRD**: D7
+
+!!! warning "Decisão superada"
+    O critério desta decisão (fila async sobre o Redis existente) permanece
+    válido, mas a biblioteca escolhida **não pode ser usada**: o Arq exige
+    `redis<6` e o projeto usa `redis 7.4`. Ver
+    [ADR-0014](0014-fila-saq.md) para a decisão vigente (SAQ).
 
 ## Contexto e problema
 

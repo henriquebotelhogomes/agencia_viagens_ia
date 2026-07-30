@@ -112,6 +112,7 @@ nav:
       - ADR-0011 Busca web: adr/0011-busca-web.md
       - ADR-0012 Observabilidade de LLM: adr/0012-observabilidade-llm.md
       - ADR-0013 Documentação viva: adr/0013-documentacao-viva.md
+      - ADR-0014 Fila SAQ: adr/0014-fila-saq.md
   - Operação:
       - Observabilidade: operations/observability.md
       - FinOps: operations/finops.md
@@ -119,6 +120,8 @@ nav:
   - Referência de API:
       - Configuração: reference/config.md
       - Runtime: reference/runtime.md
+      - API HTTP: reference/api.md
+      - Persistência e worker: reference/persistence.md
       - Agentes e tarefas: reference/agents.md
       - Serviços: reference/services.md
       - Utilitários: reference/utils.md

@@ -70,6 +70,25 @@ def test_production_logs_are_json_on_stdout(capsys) -> None:
     setup_logger(Settings(_env_file=None))
 
 
+def test_setup_logger_survives_unwritable_log_dir(mocker) -> None:
+    """Diretório de log sem permissão não derruba a aplicação.
+
+    Regressão: o container roda como usuário non-root (item S10 do PRD) e não
+    pode criar `/app/logs` — antes, isso causava `PermissionError` no startup.
+    """
+    mocker.patch(
+        "pathlib.Path.mkdir",
+        side_effect=PermissionError("Permission denied"),
+    )
+
+    result = setup_logger(Settings(_env_file=None))
+
+    assert result is logger  # configurou e seguiu, só com console
+    logger.info("segue funcionando sem arquivo")
+
+    setup_logger(Settings(_env_file=None))
+
+
 if __name__ == "__main__":
     try:
         test_logger_flow()

@@ -27,6 +27,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY README.md ./
 COPY src/ src/
 COPY app.py ./
+# Migrations do banco (PRD D8) — necessárias para `alembic upgrade head`
+COPY alembic.ini ./
+COPY alembic/ alembic/
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev

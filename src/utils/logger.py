@@ -57,16 +57,23 @@ def setup_logger(settings: Settings | None = None) -> Any:
     # Desenvolvimento: console colorido
     logger.add(sys.stderr, format=LOG_FORMAT, level=settings.LOG_LEVEL, colorize=True)
 
-    # Arquivo apenas em desenvolvimento (cria o diretório sob demanda)
-    LOG_DIR.mkdir(exist_ok=True)
-    logger.add(
-        LOG_DIR / "app.log",
-        rotation="10 MB",
-        retention="10 days",
-        format=LOG_FORMAT,
-        level="DEBUG",
-        encoding="utf-8",
-    )
+    # Arquivo apenas em desenvolvimento. Falha de permissão (ex.: container
+    # rodando como non-root) **não** pode derrubar a aplicação — segue só console.
+    try:
+        LOG_DIR.mkdir(exist_ok=True)
+        logger.add(
+            LOG_DIR / "app.log",
+            rotation="10 MB",
+            retention="10 days",
+            format=LOG_FORMAT,
+            level="DEBUG",
+            encoding="utf-8",
+        )
+    except OSError as e:
+        logger.warning(
+            f"Log em arquivo desabilitado ({LOG_DIR} indisponível): {e}. "
+            "Seguindo apenas com saída no console."
+        )
 
     return logger
 

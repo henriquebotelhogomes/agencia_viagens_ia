@@ -3,7 +3,7 @@
 > **Documento de Requisitos de Produto (PRD)** — consolida a revisão estratégica do
 > projeto, as decisões tomadas e o plano de modernização da arquitetura.
 >
-> **Versão:** 1.13 · **Status:** ✅ Fase 0 concluída · D13 (documentação viva) implementada · **Complementa:** [`specs/`](./specs/README.md)
+> **Versão:** 1.15 · **Status:** ✅ Fases 0 e 1 concluídas · 📚 [Documentação](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) · **Complementa:** [`specs/`](./specs/README.md)
 
 ***
 
@@ -42,7 +42,7 @@ recrutadores técnicos e clientes. Não há meta de receita nesta fase.
 | D4  | Autenticação           | **Adiada** (rate limiting por IP no MVP)                                | Clerk; Auth.js v5                                            |
 | D5  | Frontend               | **Next.js 15 (App Router) + TypeScript** substitui Streamlit            | Remix, SvelteKit, Angular                                    |
 | D6  | Backend                | **FastAPI + Pydantic v2**, reaproveitando `src/` como núcleo de domínio | Reescrita em Node/Go                                         |
-| D7  | Fila/worker            | **Arq** (async, Redis)                                                  | Celery (sync), Temporal (overhead)                           |
+| D7  | Fila/worker            | **SAQ** (async, Redis) — rev. ADR-0014                                  | Arq (exige `redis<6`); Celery (sync); Temporal (overhead)    |
 | D8  | Persistência           | **PostgreSQL** (+ pgvector futuro) + Redis como cache/fila              | Redis como único storage (atual)                             |
 | D9  | Mapas                  | **MapLibre GL JS** no frontend                                          | folium/streamlit-folium (server-side)                        |
 | D10 | Geocoding              | **Geoapify** (3.000 req/dia) + cache Redis com TTL longo                | Nominatim público (ToS/lentidão); LocationIQ; Mapbox; Google |
@@ -566,6 +566,8 @@ extração da API (Fase 0). O status é controlado no checklist da §15.
 | 1.11   | **Migrações finais da Fase 0**: S4, S6, S7 concluídos + D2/D10/D11/D12 implementados e validados com chamadas reais (crew completa em 50,7s, 8.430 tokens, trace no Langfuse, 4 locais via Geoapify, Tavily ativo). Failover de gateway movido para a camada da aplicação. 67 testes verdes, cobertura 94% |
 | 1.12   | **Fase 0 concluída (17/17)**: frontend validado pelo usuário com todas as funcionalidades operando. Próxima etapa: Fase 1 (API + worker) ou scaffold da documentação viva (§15.5) |
 | 1.13   | **D13 implementada**: documentação viva com MkDocs Material — 31 páginas (C4, 13 ADRs, referência de API via mkdocstrings, runbook), gate `mkdocs build --strict` no CI, `CONTRIBUTING.md` e README atualizado |
+| 1.14   | Fase 0 e D13 **publicadas**: commit `6897eab` na `master` (revisão de segurança L3 sem achados) e documentação no ar no GitHub Pages |
+| 1.15   | **Fase 1 concluída**: FastAPI (7 rotas, RFC 9457, SSE, idempotência, rate limit), worker SAQ, PostgreSQL + Alembic. Validada E2E na stack real (110s, 20k tokens, 8 locais). D7 revisada para SAQ (ADR-0014). 131 testes, cobertura 92% |
 
 ***
 
@@ -715,21 +717,52 @@ Controle de status das tarefas. Legenda: `[ ]` pendente · `[~]` em andamento ·
 
 ### 15.2 Fase 1 — API + Worker
 
-* [ ] FastAPI com `POST /v1/executions` (202 + `Idempotency-Key`)
+> ✅ **Concluída em 2026-07-30** — validada com a stack real (`docker compose`):
+> execução completa em **110s**, 20.126 tokens medidos, 8 locais geocodificados,
+> SSE recebendo eventos do worker e encerrando no estado terminal.
 
-* [ ] SSE de progresso (`GET /v1/executions/{id}/stream`)
+* [x] FastAPI com `POST /v1/executions` (202 + `Idempotency-Key`) — idempotência
+  validada: mesma chave devolve a execução original
 
-* [ ] Worker Arq consumindo fila Redis
+* [x] SSE de progresso (`GET /v1/executions/{id}/stream`) — relay via Redis
+  pub/sub; envia o estado atual e encerra em estado terminal
 
-* [ ] PostgreSQL + Alembic (`Execution`, `Itinerary`, `UsageRecord`)
+* [x] Worker **SAQ** consumindo fila Redis ([ADR-0014](./docs/adr/0014-fila-saq.md);
+  o Arq foi descartado por exigir `redis<6`)
 
-* [ ] Rate limiting por IP (FR-09)
+* [x] PostgreSQL + Alembic (`Execution`, `Itinerary`, `UsageRecord`) — migration
+  aplicada e verificada no Postgres real
 
-* [ ] Erros RFC 9457 padronizados
+* [x] Rate limiting por IP (FR-09) — janela horária em Redis, **fail-open**, com
+  hash do IP (nunca em claro)
+
+* [x] Erros RFC 9457 padronizados — `application/problem+json` com `type` estável
+  em 404, 422, 429, 503 e 500
+
+* [x] Rotas complementares: `/health` (com estado das dependências),
+  `/v1/localization`, `/v1/executions/{id}/geojson` (FR-05) e `/cancel`
+
+* [x] CORS explícito (nunca `*`) e docs interativas desligadas em produção
+
+* [x] Testes: **131 no total**, cobertura **92%** (API, worker, fila, pub/sub,
+  rate limiter, banco)
 
 * [ ] OpenTelemetry na API e no worker
 
-* [ ] Testes de contrato (schemathesis) sobre a OpenAPI
+* [ ] Testes de contrato automatizados (schemathesis) sobre a OpenAPI
+
+* [ ] Deploy no Render (api + worker + Postgres) via Blueprint
+
+#### Descobertas da implementação (bugs reais encontrados)
+
+| Problema | Correção |
+| -------- | -------- |
+| `arq` exige `redis<6`; projeto usa 7.4 | Trocado por **SAQ** (ADR-0014) |
+| `lru_cache` em função que recebia `Settings` → `TypeError: unhashable` | Separado `build_engine()` (injetável) de `get_engine()` (memoizado) |
+| `pool_size`/`max_overflow` inválidos no SQLite | Aplicados apenas em bancos não-SQLite |
+| `JSONB`/`UUID` do Postgres não sobem no SQLite dos testes | `JSON().with_variant(JSONB(), "postgresql")` |
+| Container non-root não pode criar `/app/logs` → **API não subia** | Log em arquivo com degradação graciosa + teste de regressão |
+| Alembic ausente na imagem Docker | `COPY alembic.ini alembic/` no Dockerfile |
 
 ### 15.3 Fase 2 — Frontend Next.js
 
@@ -816,7 +849,8 @@ Controle de status das tarefas. Legenda: `[ ]` pendente · `[~]` em andamento ·
 * [ ] Docstrings padrão Google em 100% do público de `src/` (maioria já conforme;
   revisão pendente em módulos legados)
 
-* [ ] Habilitar GitHub Pages no repositório (branch `gh-pages`) — **ação manual**
+* [x] Habilitar GitHub Pages no repositório (branch `gh-pages`) — **documentação no ar**
+  em <https://henriquebotelhogomes.github.io/agencia_viagens_ia/> (validado: 6 rotas 200 OK)
 
 ***
 

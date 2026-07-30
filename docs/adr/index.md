@@ -21,13 +21,14 @@ quando o contexto muda.
 | [0004](0004-autenticacao.md) | Autenticação | Aceita | Adiada (rate limit por IP) |
 | [0005](0005-frontend.md) | Framework de frontend | Aceita | Next.js 15 substitui Streamlit |
 | [0006](0006-backend.md) | Backend de API | Aceita | FastAPI + Pydantic v2 |
-| [0007](0007-fila-worker.md) | Fila e worker | Aceita | Arq |
+| [0007](0007-fila-worker.md) | Fila e worker | Substituída por [ADR-0014](0014-fila-saq.md) | Arq |
 | [0008](0008-persistencia.md) | Persistência | Aceita | PostgreSQL + Redis |
 | [0009](0009-mapas.md) | Mapas | Aceita | MapLibre GL JS |
 | [0010](0010-geocoding.md) | Geocoding | Aceita | Geoapify + cache Redis |
 | [0011](0011-busca-web.md) | Busca web dos agentes | Aceita | Tavily |
 | [0012](0012-observabilidade-llm.md) | Observabilidade de LLM | Aceita | Langfuse Cloud |
 | [0013](0013-documentacao-viva.md) | Documentação viva | Aceita | MkDocs Material |
+| [0014](0014-fila-saq.md) | Fila async | Aceita | SAQ (supersede ADR-0007) |
 
 ## Formato
 
@@ -57,5 +58,7 @@ Cada ADR segue esta estrutura:
 !!! tip "Decisões revisadas são sinal de maturidade"
     O [ADR-0002](0002-gateways-llm.md) já é a **segunda** versão da estratégia de
     LLM — a primeira (OpenRouter como gateway único) foi revisada quando novos
-    ativos ficaram disponíveis. Revisar com critério é melhor que insistir por
+    ativos ficaram disponíveis. E o [ADR-0014](0014-fila-saq.md) substituiu o
+    [ADR-0007](0007-fila-worker.md) por um conflito de dependências descoberto
+    apenas na implementação. Revisar com critério é melhor que insistir por
     consistência.

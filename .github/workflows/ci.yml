@@ -26,10 +26,10 @@ jobs:
         run: uv sync --group dev
 
       - name: Ruff Check (lint)
-        run: uv run ruff check src/ tests/ app.py scripts/
+        run: uv run ruff check src/ tests/ app.py scripts/ alembic/
 
       - name: Ruff Format (check style)
-        run: uv run ruff format src/ tests/ app.py scripts/ --check
+        run: uv run ruff format src/ tests/ app.py scripts/ alembic/ --check
 
       - name: Mypy (strict type checking)
         run: uv run mypy src/ --strict
