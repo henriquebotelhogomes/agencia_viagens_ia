@@ -145,3 +145,20 @@ class LocalizationOptions(BaseModel):
 
     currencies: dict[str, str] = Field(default_factory=lambda: dict(CURRENCY_SYMBOLS))
     languages: dict[str, str] = Field(default_factory=lambda: dict(LANGUAGE_NAMES))
+
+
+class ProblemDetailResponse(BaseModel):
+    """Envelope de erro no padrão RFC 9457 (`application/problem+json`).
+
+    Modelo **documentacional**: descreve na OpenAPI o formato que os handlers
+    de erro realmente produzem. Campos adicionais específicos do problema
+    (ex.: `retry_after`, `errors`) são permitidos pelo padrão.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    type: str = Field(description="URI estável que identifica o tipo de problema")
+    title: str = Field(description="Resumo curto do tipo de problema")
+    status: int = Field(description="Código HTTP da resposta")
+    detail: str = Field(description="Explicação específica desta ocorrência")
+    instance: str | None = Field(default=None, description="Caminho da requisição")

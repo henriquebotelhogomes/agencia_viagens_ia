@@ -4,6 +4,7 @@ Toda falha exposta ao cliente segue o mesmo envelope, com `type` estável para
 consumo programático e `detail` legível para humanos.
 """
 
+from collections.abc import Mapping
 from typing import Any
 
 from fastapi import Request, status
@@ -99,15 +100,19 @@ class ServiceUnavailable(ProblemDetail):
         )
 
 
-def _problem_response(problem: ProblemDetail, request: Request) -> JSONResponse:
-    headers = {}
+def _problem_response(
+    problem: ProblemDetail,
+    request: Request,
+    headers: Mapping[str, str] | None = None,
+) -> JSONResponse:
+    merged = dict(headers or {})
     if isinstance(problem, RateLimitExceeded):
-        headers["Retry-After"] = str(problem.extra["retry_after"])
+        merged["Retry-After"] = str(problem.extra["retry_after"])
     return JSONResponse(
         status_code=problem.status_code,
         content=problem.to_dict(instance=str(request.url.path)),
         media_type=PROBLEM_CONTENT_TYPE,
-        headers=headers or None,
+        headers=merged or None,
     )
 
 
@@ -120,14 +125,18 @@ async def problem_detail_handler(
 
 
 async def http_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Converte ``HTTPException`` do Starlette para o envelope RFC 9457."""
+    """Converte ``HTTPException`` do Starlette para o envelope RFC 9457.
+
+    Os headers da exceção original são preservados — um 405, por exemplo, exige
+    o header ``Allow`` com os métodos suportados (RFC 9110 §15.5.6).
+    """
     assert isinstance(exc, StarletteHTTPException)
     problem = ProblemDetail(
         status_code=exc.status_code,
         title="Erro na requisição",
         detail=str(exc.detail),
     )
-    return _problem_response(problem, request)
+    return _problem_response(problem, request, headers=exc.headers)
 
 
 async def validation_exception_handler(

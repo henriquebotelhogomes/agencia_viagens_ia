@@ -6,6 +6,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Header, Request, Response, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
@@ -72,6 +73,9 @@ async def create_execution(
     if not settings.cache_enabled:
         raise ServiceUnavailable("queue")
 
+    # Header vazio é ausência de chave — gravar "" colidiria na constraint UNIQUE
+    idempotency_key = idempotency_key or None
+
     # Idempotência: mesma chave devolve a execução original, sem novo custo
     if idempotency_key:
         existing = await session.scalar(
@@ -100,7 +104,19 @@ async def create_execution(
         status=ExecutionStatus.QUEUED,
     )
     session.add(execution)
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError:
+        # Corrida check-then-insert: outra requisição gravou a mesma chave entre
+        # a consulta e o commit. A constraint UNIQUE é a fonte da verdade —
+        # devolvemos a execução original, como manda a idempotência.
+        await session.rollback()
+        existing = await session.scalar(
+            select(Execution).where(Execution.idempotency_key == idempotency_key)
+        )
+        if existing is not None:
+            return _created_response(existing, request)
+        raise
     await session.refresh(execution)
 
     await enqueue_generation(execution.id)

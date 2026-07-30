@@ -6,14 +6,17 @@ importar este módulo não conecta em nada (invariante da Fase 0, item S1).
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from loguru import logger
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from src.api.errors import (
+    PROBLEM_CONTENT_TYPE,
     ProblemDetail,
     http_exception_handler,
     problem_detail_handler,
@@ -21,6 +24,7 @@ from src.api.errors import (
     validation_exception_handler,
 )
 from src.api.routers import executions, health
+from src.api.schemas import ProblemDetailResponse
 from src.config import get_settings
 from src.db.base import dispose_engine
 from src.runtime import configure_llm_runtime
@@ -62,6 +66,38 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logger.info("API finalizada.")
 
 
+def _document_problem_responses(openapi_schema: dict[str, Any]) -> dict[str, Any]:
+    """Alinha a OpenAPI ao comportamento real dos handlers de erro.
+
+    O FastAPI documenta o 422 como ``HTTPValidationError`` em
+    ``application/json``, mas os handlers desta API respondem **tudo** que é
+    erro no envelope RFC 9457 (``application/problem+json``). Sem este ajuste,
+    os testes de contrato (schemathesis) reprovam a spec — com razão.
+    """
+    problem_schema = ProblemDetailResponse.model_json_schema(
+        ref_template="#/components/schemas/{model}"
+    )
+    components = openapi_schema.setdefault("components", {}).setdefault("schemas", {})
+    components["ProblemDetailResponse"] = problem_schema
+    # O modelo não tem refs aninhadas; o 422 padrão do FastAPI deixa de existir
+    components.pop("HTTPValidationError", None)
+    components.pop("ValidationError", None)
+
+    problem_content = {
+        PROBLEM_CONTENT_TYPE: {
+            "schema": {"$ref": "#/components/schemas/ProblemDetailResponse"}
+        }
+    }
+    for path_item in openapi_schema.get("paths", {}).values():
+        for operation in path_item.values():
+            if not isinstance(operation, dict):
+                continue
+            for status_code, response in operation.get("responses", {}).items():
+                if status_code.isdigit() and int(status_code) >= 400:
+                    response["content"] = problem_content
+    return openapi_schema
+
+
 def create_app() -> FastAPI:
     """Monta a aplicação FastAPI com rotas, handlers e middleware."""
     settings = get_settings()
@@ -93,6 +129,21 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(executions.router)
+
+    def custom_openapi() -> dict[str, Any]:
+        if app.openapi_schema:
+            return app.openapi_schema
+        app.openapi_schema = _document_problem_responses(
+            get_openapi(
+                title=app.title,
+                version=app.version,
+                description=app.description,
+                routes=app.routes,
+            )
+        )
+        return app.openapi_schema
+
+    app.openapi = custom_openapi  # type: ignore[method-assign]
     return app
 
 

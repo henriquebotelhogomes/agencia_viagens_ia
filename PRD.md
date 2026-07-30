@@ -3,7 +3,7 @@
 > **Documento de Requisitos de Produto (PRD)** — consolida a revisão estratégica do
 > projeto, as decisões tomadas e o plano de modernização da arquitetura.
 >
-> **Versão:** 1.16 · **Status:** ✅ Fases 0 e 1 concluídas · 🚀 Deploy em preparação · 📚 [Documentação](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) · **Complementa:** [`specs/`](./specs/README.md)
+> **Versão:** 1.17 · **Status:** ✅ Fases 0 e 1 concluídas · 🚀 Deploy em preparação · 📚 [Documentação](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) · **Complementa:** [`specs/`](./specs/README.md)
 
 ***
 
@@ -591,6 +591,7 @@ extração da API (Fase 0). O status é controlado no checklist da §15.
 | 1.14   | Fase 0 e D13 **publicadas**: commit `6897eab` na `master` (revisão de segurança L3 sem achados) e documentação no ar no GitHub Pages |
 | 1.15   | **Fase 1 concluída**: FastAPI (7 rotas, RFC 9457, SSE, idempotência, rate limit), worker SAQ, PostgreSQL + Alembic. Validada E2E na stack real (110s, 20k tokens, 8 locais). D7 revisada para SAQ (ADR-0014). 131 testes, cobertura 92% |
 | 1.16   | **D3 revisada → Heroku (ADR-0015)**: o free tier do Render não cobre background workers e apaga o Postgres em 30 dias; crédito GitHub Student (US$ 13/mês × 24 meses) sustenta a arquitetura completa. `heroku.yml` com release phase, fábrica central de clientes Redis (TLS self-signed) e normalização da `DATABASE_URL`. 147 testes, cobertura 92% |
+| 1.17   | **Testes de contrato (schemathesis)** sobre as 7 rotas da OpenAPI — encontraram e corrigiram 3 bugs reais: 405 sem header `Allow` (RFC 9110), spec do 422 divergente do envelope RFC 9457 servido, e `Idempotency-Key` vazia gerando 500 por colisão UNIQUE (+ corrida check-then-insert tratada pela constraint). 148 testes |
 
 ***
 
@@ -772,7 +773,7 @@ Controle de status das tarefas. Legenda: `[ ]` pendente · `[~]` em andamento ·
 
 * [ ] OpenTelemetry na API e no worker
 
-* [ ] Testes de contrato automatizados (schemathesis) sobre a OpenAPI
+* [x] Testes de contrato automatizados (schemathesis) sobre a OpenAPI
 
 * [ ] Deploy no Heroku (api + worker + Postgres) via `heroku.yml`
 

@@ -53,6 +53,7 @@ dev = [
     "aiosqlite>=0.20,<1.0",
     "types-requests",
     "pre-commit>=4.5,<5.0",
+    "schemathesis>=4.1,<5.0",
 ]
 # Documentação viva (PRD D13 / §8.5) — grupo separado para não pesar o dev
 docs = [
