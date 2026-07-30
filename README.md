@@ -6,10 +6,9 @@
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
 [![Linter: Ruff](https://img.shields.io/badge/linter-ruff-red.svg)](https://github.com/astral-sh/ruff)
 [![Types: mypy strict](https://img.shields.io/badge/types-mypy%20strict-blue.svg)](https://mypy-lang.org/)
-[![Cloud: Render](https://img.shields.io/badge/cloud-render-000000.svg)](https://render.com/)
+[![Cloud: Heroku](https://img.shields.io/badge/cloud-heroku-430098.svg)](https://heroku.com/)
 
-> **Live Demo:** [agencia-viagens-ia.onrender.com](https://agencia-viagens-ia.onrender.com/)
-> · **Documentação técnica:** [henriquebotelhogomes.github.io/agencia_viagens_ia](https://henriquebotelhogomes.github.io/agencia_viagens_ia/)
+> **Documentação técnica:** [henriquebotelhogomes.github.io/agencia_viagens_ia](https://henriquebotelhogomes.github.io/agencia_viagens_ia/)
 
 ---
 
@@ -89,7 +88,7 @@ graph TD
 | **Ferramentas dos agentes** | Tavily (busca web), Geoapify (geocoding) |
 | **Backend & Cache** | Python 3.12, Redis, Pydantic v2 (Settings + SecretStr) |
 | **Frontend** | Streamlit (playground) — Next.js 15 planejado |
-| **DevOps** | Docker multi-stage non-root, GitHub Actions, Ruff, mypy strict, render.yaml (IaC), uv |
+| **DevOps** | Docker multi-stage non-root, GitHub Actions, Ruff, mypy strict, heroku.yml (IaC), uv |
 | **Observabilidade** | Langfuse (tracing de LLM), Loguru (JSON em stdout), FinOps por tokens reais |
 | **Documentação** | MkDocs Material + mkdocstrings, ADRs versionados |
 

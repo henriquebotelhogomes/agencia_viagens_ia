@@ -119,6 +119,25 @@ class Settings(BaseSettings):
             return v.strip()
         return v
 
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def normalize_async_database_url(cls, v: Any) -> Any:
+        """Garante o driver async na URL do PostgreSQL.
+
+        Provedores gerenciados (Render, Heroku) entregam a URL como
+        ``postgres://`` ou ``postgresql://``, que o SQLAlchemy tenta abrir com o
+        driver **síncrono** e falha em contexto async. A normalização aqui evita
+        depender de configuração manual correta no dashboard.
+        """
+        if not isinstance(v, str) or not v:
+            return v
+        v = v.strip()
+        if v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql+asyncpg://", 1)
+        if v.startswith("postgresql://"):
+            return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return v
+
     # ------------------------------------------------------------------
     # Acesso aos segredos em texto puro (uso pontual, nunca em log)
     # ------------------------------------------------------------------

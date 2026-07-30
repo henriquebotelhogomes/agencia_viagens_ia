@@ -92,3 +92,32 @@ jobs:
 
       - name: Build production image (runtime non-root)
         run: docker build --target runtime -t agencia-viagens-ia .
+
+      - name: Imagem funciona com UID arbitrário (ADR-0015)
+        # O Heroku ignora o `USER` do Dockerfile e roda com um UID aleatório e
+        # GID 0. Sem um HOME gravável, o CrewAI falha no import ao criar o
+        # diretório de storage do ChromaDB — e o worker não sobe em produção.
+        run: |
+          docker run --rm --user 54321:0 agencia-viagens-ia \
+            python -c "import src.worker.tasks; print('import do worker OK com UID arbitrario')"
+
+      - name: Processo web respeita $PORT (ADR-0015)
+        # `EXPOSE` é ignorado pela plataforma; se o comando ignorar $PORT, o
+        # deploy falha com "R10 Boot timeout".
+        run: |
+          docker run -d --name web-uid-check --user 54321:0 \
+            -e PORT=41234 -e APP_ENV=production -p 41234:41234 \
+            agencia-viagens-ia \
+            sh -c 'uvicorn src.api.main:app --host 0.0.0.0 --port $PORT'
+          for i in $(seq 1 20); do
+            if curl -fsS http://localhost:41234/health > /dev/null 2>&1; then
+              echo "health respondeu na porta injetada"
+              docker rm -f web-uid-check
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "API nao respondeu na porta $PORT"
+          docker logs web-uid-check
+          docker rm -f web-uid-check
+          exit 1

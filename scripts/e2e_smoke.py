@@ -1,12 +1,16 @@
-"""Teste E2E manual da Fase 1 contra a stack real (docker compose).
+"""Teste E2E manual da Fase 1 contra uma stack real.
 
-Uso (com a stack no ar):
+Uso (stack local via docker compose):
     uv run python -m scripts.e2e_smoke
+
+Uso (produção):
+    uv run python -m scripts.e2e_smoke --base-url https://voyager-ia.herokuapp.com
 
 NÃO é um teste automatizado: consome tokens de LLM reais. Serve para validar
 a integração completa API → fila → worker → banco → SSE.
 """
 
+import argparse
 import io
 import json
 import sys
@@ -17,7 +21,7 @@ import urllib.request
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
-API = "http://localhost:8000"
+DEFAULT_BASE_URL = "http://localhost:8000"
 BRIEFING = {
     "origem": "São Paulo, Brasil",
     "destino": "Lisboa, Portugal",
@@ -27,6 +31,9 @@ BRIEFING = {
     "idioma": "pt-BR",
 }
 POLL_TIMEOUT_SECONDS = 300
+
+# Definido em `main` a partir dos argumentos de linha de comando
+API = DEFAULT_BASE_URL
 
 
 def _request(path: str, method: str = "GET", body: dict | None = None) -> dict:
@@ -43,6 +50,18 @@ def _request(path: str, method: str = "GET", body: dict | None = None) -> dict:
 
 
 def main() -> int:
+    global API
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--base-url",
+        default=DEFAULT_BASE_URL,
+        help=f"URL base da API (padrão: {DEFAULT_BASE_URL})",
+    )
+    args = parser.parse_args()
+    API = args.base_url.rstrip("/")
+
+    print(f"Alvo: {API}\n")
     print("== 1. Criando execução ==")
     created = _request("/v1/executions", method="POST", body=BRIEFING)
     execution_id = created["id"]

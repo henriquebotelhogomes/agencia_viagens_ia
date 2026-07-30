@@ -10,8 +10,10 @@ from functools import lru_cache
 
 from loguru import logger
 from saq import Queue
+from saq.queue.redis import RedisQueue
 
 from src.config import Settings, get_settings
+from src.services.redis_client import create_async_client
 
 # Nome da task registrada no worker
 GENERATE_ITINERARY_TASK = "generate_itinerary"
@@ -28,7 +30,9 @@ def build_queue(settings: Settings | None = None) -> Queue:
         raise RuntimeError(
             "REDIS_URL não configurada — necessária para a fila de jobs (ADR-0014)."
         )
-    return Queue.from_url(resolved.REDIS_URL, name=resolved.QUEUE_NAME)
+    # `Queue.from_url` repassa os kwargs ao construtor da fila, não ao cliente
+    # Redis — então o cliente é montado aqui para receber a config de TLS.
+    return RedisQueue(create_async_client(resolved), name=resolved.QUEUE_NAME)
 
 
 @lru_cache(maxsize=1)

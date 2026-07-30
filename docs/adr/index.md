@@ -17,7 +17,7 @@ quando o contexto muda.
 | - | ------- | ------ | ------- |
 | [0001](0001-posicionamento.md) | Posicionamento do produto | Aceita | Portfólio de elite |
 | [0002](0002-gateways-llm.md) | Gateways de LLM | Aceita | OpenCode Go primário + OpenRouter |
-| [0003](0003-hospedagem.md) | Hospedagem | Aceita | Tudo no Render |
+| [0003](0003-hospedagem.md) | Hospedagem | Substituída por [ADR-0015](0015-hospedagem-heroku.md) | Tudo no Render |
 | [0004](0004-autenticacao.md) | Autenticação | Aceita | Adiada (rate limit por IP) |
 | [0005](0005-frontend.md) | Framework de frontend | Aceita | Next.js 15 substitui Streamlit |
 | [0006](0006-backend.md) | Backend de API | Aceita | FastAPI + Pydantic v2 |
@@ -29,6 +29,7 @@ quando o contexto muda.
 | [0012](0012-observabilidade-llm.md) | Observabilidade de LLM | Aceita | Langfuse Cloud |
 | [0013](0013-documentacao-viva.md) | Documentação viva | Aceita | MkDocs Material |
 | [0014](0014-fila-saq.md) | Fila async | Aceita | SAQ (supersede ADR-0007) |
+| [0015](0015-hospedagem-heroku.md) | Hospedagem | Aceita | Heroku com crédito Student (supersede ADR-0003) |
 
 ## Formato
 
@@ -58,7 +59,9 @@ Cada ADR segue esta estrutura:
 !!! tip "Decisões revisadas são sinal de maturidade"
     O [ADR-0002](0002-gateways-llm.md) já é a **segunda** versão da estratégia de
     LLM — a primeira (OpenRouter como gateway único) foi revisada quando novos
-    ativos ficaram disponíveis. E o [ADR-0014](0014-fila-saq.md) substituiu o
+    ativos ficaram disponíveis. O [ADR-0014](0014-fila-saq.md) substituiu o
     [ADR-0007](0007-fila-worker.md) por um conflito de dependências descoberto
-    apenas na implementação. Revisar com critério é melhor que insistir por
-    consistência.
+    apenas na implementação. E o [ADR-0015](0015-hospedagem-heroku.md) substituiu
+    o [ADR-0003](0003-hospedagem.md) ao descobrir, na leitura da documentação de
+    preços, que o free tier escolhido não cobria a arquitetura. Revisar com
+    critério é melhor que insistir por consistência.

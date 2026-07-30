@@ -62,7 +62,20 @@ COPY --from=builder --chown=app:app /app /app
 
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
-    APP_ENV=production
+    APP_ENV=production \
+    # Plataformas gerenciadas (Heroku, OpenShift) ignoram o `USER` e rodam com
+    # um UID **arbitrário** e GID 0. Sem um HOME gravável, o CrewAI quebra no
+    # import: ele resolve `$HOME/.local/share` para o storage do ChromaDB e
+    # tenta criar o diretório (ADR-0015).
+    HOME=/app \
+    XDG_DATA_HOME=/app/.local/share \
+    XDG_CACHE_HOME=/app/.cache
+
+# Diretórios de escrita pertencendo ao grupo root com permissão de owner:
+# receita padrão para funcionar com qualquer UID (o GID é sempre 0).
+RUN mkdir -p /app/.local/share /app/.cache /app/logs \
+    && chgrp -R 0 /app \
+    && chmod -R g=u /app
 
 USER app
 

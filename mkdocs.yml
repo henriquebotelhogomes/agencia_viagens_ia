@@ -113,7 +113,9 @@ nav:
       - ADR-0012 Observabilidade de LLM: adr/0012-observabilidade-llm.md
       - ADR-0013 Documentação viva: adr/0013-documentacao-viva.md
       - ADR-0014 Fila SAQ: adr/0014-fila-saq.md
+      - ADR-0015 Hospedagem Heroku: adr/0015-hospedagem-heroku.md
   - Operação:
+      - Deploy: operations/deploy.md
       - Observabilidade: operations/observability.md
       - FinOps: operations/finops.md
       - Runbook: operations/runbook.md

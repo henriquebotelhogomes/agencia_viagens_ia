@@ -1,8 +1,13 @@
 # ADR-0003 — Hospedagem
 
-- **Status**: Aceita
+- **Status**: Substituída por [ADR-0015](0015-hospedagem-heroku.md)
 - **Data**: 2026-07-29
 - **Contexto do PRD**: D3
+
+!!! warning "Decisão substituída"
+    O free tier do Render não cobre background workers e apaga o Postgres em 30
+    dias, o que inviabilizaria a arquitetura da Fase 1 sem custo. Ver
+    [ADR-0015](0015-hospedagem-heroku.md).
 
 ## Contexto e problema
 

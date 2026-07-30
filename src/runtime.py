@@ -12,10 +12,10 @@ uma única vez, no início da execução.
 
 import os
 
-import redis
 from loguru import logger
 
 from src.config import Settings, get_settings
+from src.services.redis_client import create_client
 
 _configured = False
 
@@ -31,10 +31,7 @@ def _purge_unreachable_redis(settings: Settings) -> None:
         return
 
     try:
-        client = redis.from_url(
-            settings.REDIS_URL,
-            socket_connect_timeout=settings.REDIS_CONNECT_TIMEOUT,
-        )
+        client = create_client(settings)
         client.ping()
     except Exception as e:
         logger.warning(

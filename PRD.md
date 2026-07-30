@@ -3,7 +3,7 @@
 > **Documento de Requisitos de Produto (PRD)** — consolida a revisão estratégica do
 > projeto, as decisões tomadas e o plano de modernização da arquitetura.
 >
-> **Versão:** 1.15 · **Status:** ✅ Fases 0 e 1 concluídas · 📚 [Documentação](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) · **Complementa:** [`specs/`](./specs/README.md)
+> **Versão:** 1.16 · **Status:** ✅ Fases 0 e 1 concluídas · 🚀 Deploy em preparação · 📚 [Documentação](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) · **Complementa:** [`specs/`](./specs/README.md)
 
 ***
 
@@ -38,7 +38,7 @@ recrutadores técnicos e clientes. Não há meta de receita nesta fase.
 | --- | ---------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------ |
 | D1  | Posicionamento         | **Portfólio de elite**                                                  | SaaS real; híbrido evolutivo                                 |
 | D2  | Estratégia de LLM      | **OpenCode Go primário + OpenRouter fallback/pro** (rev. v1.1)          | OpenRouter único; só Go; chaves diretas                      |
-| D3  | Hospedagem             | **Tudo no Render** (Next.js + FastAPI + worker + Postgres + Redis)      | Vercel + Render; containers próprios                         |
+| D3  | Hospedagem             | **Heroku** com crédito GitHub Student — rev. ADR-0015                   | Render free (sem worker; Postgres expira); Azure; DigitalOcean |
 | D4  | Autenticação           | **Adiada** (rate limiting por IP no MVP)                                | Clerk; Auth.js v5                                            |
 | D5  | Frontend               | **Next.js 15 (App Router) + TypeScript** substitui Streamlit            | Remix, SvelteKit, Angular                                    |
 | D6  | Backend                | **FastAPI + Pydantic v2**, reaproveitando `src/` como núcleo de domínio | Reescrita em Node/Go                                         |
@@ -170,15 +170,36 @@ automaticamente pelo CI. Escolhas e trade-offs:
   Docusaurus (stack Node paralela só p/ docs); wikis externas (Notion/GitBook)
   violam o princípio de docs no mesmo PR do código.
 
-### 2.4 Racional da D3 — Tudo no Render
+### 2.4 Racional da D3 — Heroku com crédito de estudante (rev. ADR-0015)
 
-* Um único provedor: web service (Next.js), web service (FastAPI), background worker
-  (Arq), Render Postgres e Render Key Value (Redis).
+A decisão original era “tudo no Render”, pela simplicidade de um provedor único com
+Blueprint versionado. Ao preparar o deploy da Fase 1, três limites do free tier
+invalidaram a premissa de custo zero:
 
-* `render.yaml` (Blueprint) versionado = infraestrutura como código auditável.
+* Free instances existem **só** para web services, Postgres e Key Value — **não
+  para background workers**. O worker da D7 não teria onde rodar.
+* *“Free Render Postgres databases expire 30 days after creation”*, com exclusão
+  dos dados após 14 dias de carência.
+* `preDeployCommand` (migrations) é recurso de plano pago.
 
-* Trade-off aceito: sem edge/CDN da Vercel; para portfólio, o ganho de simplicidade
-  operacional e billing único compensa.
+Manter o Render exigiria acoplar o worker à API e conviver com um banco temporário
+— duas concessões incompatíveis com a D1. A aprovação no **GitHub Student
+Developer Pack** abriu a alternativa: **US$ 13/mês de crédito no Heroku por 24
+meses**, que cobre com precisão o custo da arquitetura completa:
+
+| Componente | Plano | Custo |
+| ---------- | ----- | ----- |
+| web + worker dynos | Eco (pool de 1.000 h) | US$ 5 |
+| PostgreSQL | Essential-0 | US$ 5 |
+| Redis | Key-Value Mini | US$ 3 |
+| | **Total** | **US$ 13/mês** |
+
+* `heroku.yml` versionado mantém a infraestrutura como código, agora com **release
+  phase**: se a migration falhar, o deploy é abortado e a versão anterior segue no ar.
+* Trade-off aceito: sem cache de layers (deploy mais lento) e crédito com prazo —
+  **revisitar até julho de 2028**.
+* A portabilidade está preservada onde importa: a aplicação é um container
+  12-Factor sem uma linha de código específica de provedor.
 
 ***
 
@@ -389,9 +410,9 @@ extração da API (Fase 0). O status é controlado no checklist da §15.
 ### 8.4 CI/CD
 
 * Pipeline: lint (ruff) → type-check (mypy strict) → testes + cobertura →
-  scans de segurança → build Docker → deploy por Blueprint no Render.
+  scans de segurança → build Docker → deploy no Heroku (release phase aplica as migrations).
 
-* Ambientes: `local` (docker-compose) → `production` (Render). Staging opcional.
+* Ambientes: `local` (docker-compose) → `production` (Heroku). Staging opcional.
 
 ### 8.5 Documentação viva (D13)
 
@@ -499,7 +520,7 @@ extração da API (Fase 0). O status é controlado no checklist da §15.
 
 * Design system (shadcn/ui), i18n pt-BR/EN, painel FinOps público.
 
-* **DoD:** demo pública no Render; Lighthouse > 90; Streamlit aposentado.
+* **DoD:** demo pública no Heroku; Lighthouse > 90; Streamlit aposentado.
 
 ### Fase 3 — Excelência operacional (contínuo)
 
@@ -527,7 +548,8 @@ extração da API (Fase 0). O status é controlado no checklist da §15.
 | Breaking changes do CrewAI/litellm                                    | Alta  | Médio   | Pin de versão + testes de contrato do núcleo                                                      |
 | Indisponibilidade de um gateway de LLM                                | Baixa | Alto    | Dois gateways independentes (Go + OpenRouter) via litellm; rollback p/ chaves diretas é só config |
 | **Orçamento do OpenCode Go compartilhado com o uso de coding** do dev | Média | Médio   | Teto próprio de requests na app + failover automático p/ OpenRouter + alerta antes do teto de 5h  |
-| Free tier do Render (cold start, limites)                             | Média | Médio   | Aceito para portfólio; healthcheck + upgrade pontual p/ demos                                     |
+| Crédito do GitHub Student no Heroku expira em 24 meses (jul/2028)     | Alta  | Médio   | Custo real é baixo (US$ 13/mês); app é container 12-Factor, portável a qualquer provedor |
+| Cold start do plano Eco (dynos dormem sem tráfego)                    | Alta  | Baixo   | Aceito para portfólio; documentado no runbook — a primeira visita acorda os dynos       |
 | Abuso da demo pública (sem auth)                                      | Média | Médio   | Rate limit por IP + teto diário de custo LLM + kill switch                                        |
 | Custo de LLM fora de controle                                         | Baixa | Médio   | Modelos baratos do Go como default + limites por execução + alerta de budget                      |
 | Cotas dos free tiers de apoio (Tavily 1k/mês, Geoapify 3k/dia)        | Média | Baixo   | Cache Redis agressivo (hit > 80% em geocoding) + degradação graciosa sem a ferramenta             |
@@ -568,6 +590,7 @@ extração da API (Fase 0). O status é controlado no checklist da §15.
 | 1.13   | **D13 implementada**: documentação viva com MkDocs Material — 31 páginas (C4, 13 ADRs, referência de API via mkdocstrings, runbook), gate `mkdocs build --strict` no CI, `CONTRIBUTING.md` e README atualizado |
 | 1.14   | Fase 0 e D13 **publicadas**: commit `6897eab` na `master` (revisão de segurança L3 sem achados) e documentação no ar no GitHub Pages |
 | 1.15   | **Fase 1 concluída**: FastAPI (7 rotas, RFC 9457, SSE, idempotência, rate limit), worker SAQ, PostgreSQL + Alembic. Validada E2E na stack real (110s, 20k tokens, 8 locais). D7 revisada para SAQ (ADR-0014). 131 testes, cobertura 92% |
+| 1.16   | **D3 revisada → Heroku (ADR-0015)**: o free tier do Render não cobre background workers e apaga o Postgres em 30 dias; crédito GitHub Student (US$ 13/mês × 24 meses) sustenta a arquitetura completa. `heroku.yml` com release phase, fábrica central de clientes Redis (TLS self-signed) e normalização da `DATABASE_URL`. 147 testes, cobertura 92% |
 
 ***
 
@@ -751,7 +774,7 @@ Controle de status das tarefas. Legenda: `[ ]` pendente · `[~]` em andamento ·
 
 * [ ] Testes de contrato automatizados (schemathesis) sobre a OpenAPI
 
-* [ ] Deploy no Render (api + worker + Postgres) via Blueprint
+* [ ] Deploy no Heroku (api + worker + Postgres) via `heroku.yml`
 
 #### Descobertas da implementação (bugs reais encontrados)
 
@@ -782,7 +805,7 @@ Controle de status das tarefas. Legenda: `[ ]` pendente · `[~]` em andamento ·
 
 * [ ] Testes E2E com Playwright
 
-* [ ] Deploy no Render via Blueprint; Lighthouse > 90
+* [ ] Deploy do frontend no Heroku; Lighthouse > 90
 
 * [ ] Streamlit aposentado
 

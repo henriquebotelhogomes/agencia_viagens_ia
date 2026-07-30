@@ -14,6 +14,7 @@ import redis.asyncio as aioredis
 from loguru import logger
 
 from src.config import Settings, get_settings
+from src.services.redis_client import create_async_client
 
 RATE_LIMIT_PREFIX = "ratelimit:executions"
 WINDOW_SECONDS = 3600  # janela de 1 hora
@@ -55,11 +56,7 @@ class RateLimiter:
         if not self.enabled:
             return None
         if self._client is None:
-            self._client = aioredis.from_url(
-                self.settings.REDIS_URL,
-                decode_responses=True,
-                socket_connect_timeout=self.settings.REDIS_CONNECT_TIMEOUT,
-            )
+            self._client = create_async_client(self.settings, decode_responses=True)
         return self._client
 
     async def check(self, ip_hash: str) -> RateLimitResult:

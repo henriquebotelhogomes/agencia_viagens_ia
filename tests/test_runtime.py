@@ -76,7 +76,7 @@ def test_purge_unreachable_redis_removes_env(mocker) -> None:
     )
     mock_client = mocker.MagicMock()
     mock_client.ping.side_effect = Exception("Connection refused")
-    mocker.patch("src.runtime.redis.from_url", return_value=mock_client)
+    mocker.patch("src.runtime.create_client", return_value=mock_client)
 
     settings = Settings(_env_file=None, REDIS_URL="redis://invalid-host:6379/0")
     _purge_unreachable_redis(settings)
@@ -87,7 +87,7 @@ def test_purge_unreachable_redis_removes_env(mocker) -> None:
 def test_purge_keeps_reachable_redis(mocker) -> None:
     """Redis acessível permanece no ambiente."""
     mocker.patch.dict(os.environ, {"REDIS_URL": "redis://localhost:6379/0"}, clear=True)
-    mocker.patch("src.runtime.redis.from_url", return_value=mocker.MagicMock())
+    mocker.patch("src.runtime.create_client", return_value=mocker.MagicMock())
 
     settings = Settings(_env_file=None, REDIS_URL="redis://localhost:6379/0")
     _purge_unreachable_redis(settings)

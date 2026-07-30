@@ -15,6 +15,7 @@ import redis
 from loguru import logger
 
 from src.config import Settings, get_settings
+from src.services.redis_client import create_client
 from src.utils.localization import DEFAULT_CURRENCY, DEFAULT_LANGUAGE
 
 
@@ -26,11 +27,7 @@ class CacheService:
 
         if self.enabled:
             try:
-                self.client = redis.from_url(
-                    self.settings.REDIS_URL,
-                    decode_responses=True,
-                    socket_connect_timeout=self.settings.REDIS_CONNECT_TIMEOUT,
-                )
+                self.client = create_client(self.settings, decode_responses=True)
                 # Ping para confirmar que a conexão realmente funciona
                 self.client.ping()
                 logger.info("🟢 Redis Cache Service configurado com sucesso.")
