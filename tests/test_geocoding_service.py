@@ -1,76 +1,193 @@
+"""Testes do GeocodingService: extração via tier `fast`, Geoapify e cache."""
+
+import json
 from unittest.mock import MagicMock
 
+from src.config import Settings
 from src.models.location import Location
-from src.services.geocoding_service import GeocodingService
+from src.services.cache_service import CacheService
+from src.services.geocoding_service import MAX_EXTRACTED_LOCATIONS, GeocodingService
 
 
-def test_extract_locations_empty_on_error(mocker) -> None:
-    """Testa extração de locais com erro de LLM (retorna lista vazia)."""
-    mock_llm = MagicMock()
-    mock_llm.invoke.side_effect = Exception("API Error")
-    mocker.patch("src.services.geocoding_service.ChatGroq", return_value=mock_llm)
-
-    service = GeocodingService()
-    locations = service.extract_locations("Some itinerary")
-
-    assert locations == [], "Expected empty list on API error"
-    # Verifica se LLM foi chamado
-    mock_llm.invoke.assert_called_once()
+def _settings(**overrides: object) -> Settings:
+    return Settings(_env_file=None, **overrides)  # type: ignore[arg-type]
 
 
-def test_get_coordinates_returns_none_on_fail(mocker) -> None:
-    """Testa coordenadas None para local não encontrado."""
-    service = GeocodingService()
-    service.geolocator.geocode = MagicMock(return_value=None)
+def _service_with_llm(mocker, content: str | Exception) -> GeocodingService:
+    """Serviço com Go configurado e litellm.completion mockado."""
+    mock_completion = mocker.patch("src.services.geocoding_service.litellm.completion")
+    if isinstance(content, Exception):
+        mock_completion.side_effect = content
+    else:
+        response = MagicMock()
+        response.choices[0].message.content = content
+        mock_completion.return_value = response
+    service = GeocodingService(_settings(OPENCODE_API_KEY="mock_go_key"))
+    return service
 
-    coords = service.get_coordinates("NonExistentPlace")
 
-    assert coords is None, "Expected None for non-existent place"
-    service.geolocator.geocode.assert_called_once_with("NonExistentPlace")
+# ---------------------------------------------------------------------------
+# Extração de locais (tier `fast` via litellm, schema LocationList — S16)
+# ---------------------------------------------------------------------------
+
+
+def test_extract_locations_parses_valid_json(mocker) -> None:
+    payload = json.dumps(
+        {"locations": [{"name": "Museu do Louvre"}, {"name": "  Torre Eiffel  "}]}
+    )
+    service = _service_with_llm(mocker, payload)
+
+    names = service.extract_locations("Roteiro de Paris")
+
+    assert names == ["Museu do Louvre", "Torre Eiffel"]
+
+
+def test_extract_locations_caps_at_maximum(mocker) -> None:
+    payload = json.dumps({"locations": [{"name": f"Local {i}"} for i in range(10)]})
+    service = _service_with_llm(mocker, payload)
+
+    assert len(service.extract_locations("Roteiro extenso")) == MAX_EXTRACTED_LOCATIONS
+
+
+def test_extract_locations_empty_on_llm_error(mocker) -> None:
+    """Toda a cadeia falhando resulta em lista vazia, sem exceção."""
+    service = _service_with_llm(mocker, Exception("API Error"))
+
+    assert service.extract_locations("Some itinerary") == []
+
+
+def test_extract_locations_empty_on_invalid_json(mocker) -> None:
+    service = _service_with_llm(mocker, "desculpe, não consigo ajudar")
+
+    assert service.extract_locations("Roteiro") == []
+
+
+def test_extract_locations_empty_input_short_circuits(mocker) -> None:
+    mock_completion = mocker.patch("src.services.geocoding_service.litellm.completion")
+    service = GeocodingService(_settings(OPENCODE_API_KEY="mock_go_key"))
+
+    assert service.extract_locations("") == []
+    mock_completion.assert_not_called()
+
+
+def test_extraction_chain_falls_back_to_openrouter(mocker) -> None:
+    """Se o Go falhar, a extração tenta o fallback do OpenRouter (D2)."""
+    mock_completion = mocker.patch("src.services.geocoding_service.litellm.completion")
+    ok_response = MagicMock()
+    ok_response.choices[0].message.content = json.dumps(
+        {"locations": [{"name": "Coliseu"}]}
+    )
+    mock_completion.side_effect = [Exception("Go 429"), ok_response]
+
+    service = GeocodingService(
+        _settings(OPENCODE_API_KEY="mock_go", OPENROUTER_API_KEY="mock_or")
+    )
+    names = service.extract_locations("Roteiro de Roma")
+
+    assert names == ["Coliseu"]
+    assert mock_completion.call_count == 2
+    # Primeira tentativa no Go, segunda no OpenRouter
+    first, second = mock_completion.call_args_list
+    assert first.kwargs["model"].startswith("openai/")
+    assert second.kwargs["model"].startswith("openrouter/")
+
+
+# ---------------------------------------------------------------------------
+# Geocoding: Geoapify primário (D10), Nominatim fallback, cache Redis
+# ---------------------------------------------------------------------------
+
+
+def test_get_coordinates_uses_geoapify_when_key_present(mocker) -> None:
+    mock_get = mocker.patch("src.services.geocoding_service.requests.get")
+    mock_get.return_value.json.return_value = {
+        "features": [{"geometry": {"coordinates": [2.3522, 48.8566]}}]
+    }
+    service = GeocodingService(_settings(GEOAPIFY_API_KEY="mock_geo_key"))
+
+    coords = service.get_coordinates("Paris")
+
+    # Geoapify devolve [lon, lat]; o serviço normaliza para (lat, lon)
+    assert coords == (48.8566, 2.3522)
+    assert mock_get.call_args.kwargs["params"]["text"] == "Paris"
+
+
+def test_get_coordinates_geoapify_error_returns_none(mocker) -> None:
+    mocker.patch(
+        "src.services.geocoding_service.requests.get",
+        side_effect=Exception("timeout"),
+    )
+    service = GeocodingService(_settings(GEOAPIFY_API_KEY="mock_geo_key"))
+
+    assert service.get_coordinates("Paris") is None
+
+
+def test_get_coordinates_falls_back_to_nominatim_without_key() -> None:
+    """Sem chave Geoapify, degrada graciosamente para o Nominatim."""
+    service = GeocodingService(_settings(geocoding_delay=0.0))
+    mock_location = MagicMock(latitude=12.34, longitude=56.78)
+    service._geolocator = MagicMock()
+    service._geolocator.geocode.return_value = mock_location
+
+    assert service.get_coordinates("Lisboa") == (12.34, 56.78)
+
+
+def test_get_coordinates_empty_address_returns_none() -> None:
+    service = GeocodingService(_settings())
+
+    assert service.get_coordinates("") is None
+
+
+def test_get_coordinates_reads_from_cache_before_network(mocker) -> None:
+    """Cache hit não toca a rede (D10: hit ratio > 80% esperado)."""
+    mock_get = mocker.patch("src.services.geocoding_service.requests.get")
+    cache = CacheService(_settings())
+    cache.enabled = True
+    cache.client = MagicMock()
+    cache.client.get.return_value = json.dumps([48.85, 2.35])
+
+    service = GeocodingService(_settings(GEOAPIFY_API_KEY="mock_geo_key"), cache=cache)
+
+    assert service.get_coordinates("Paris") == (48.85, 2.35)
+    mock_get.assert_not_called()
+
+
+def test_get_coordinates_saves_to_cache_after_geocoding(mocker) -> None:
+    mock_get = mocker.patch("src.services.geocoding_service.requests.get")
+    mock_get.return_value.json.return_value = {
+        "features": [{"geometry": {"coordinates": [2.35, 48.85]}}]
+    }
+    settings = _settings(
+        GEOAPIFY_API_KEY="mock_geo_key", GEOCODING_CACHE_TTL_SECONDS=999
+    )
+    cache = CacheService(_settings())
+    cache.enabled = True
+    cache.client = MagicMock()
+    cache.client.get.return_value = None
+
+    service = GeocodingService(settings, cache=cache)
+    service.get_coordinates("Paris")
+
+    key, ttl, value = cache.client.setex.call_args[0]
+    assert key.startswith("geocode:")
+    assert ttl == 999
+    assert json.loads(value) == [48.85, 2.35]
 
 
 def test_process_itinerary_locations_full_flow(mocker) -> None:
-    """Testa fluxo completo: extração + geocodificação."""
-    service = GeocodingService()
-
-    # Mock extract_locations
+    """Fluxo completo: extração + geocodificação."""
+    service = GeocodingService(_settings(GEOAPIFY_API_KEY="mock_geo_key"))
     mocker.patch.object(service, "extract_locations", return_value=["Paris", "London"])
-
-    # Mock geocode with side_effect
-    mock_location_paris = MagicMock()
-    mock_location_paris.latitude = 48.8566
-    mock_location_paris.longitude = 2.3522
-    mock_location_london = MagicMock()
-    mock_location_london.latitude = 51.5074
-    mock_location_london.longitude = -0.1278
-
     mocker.patch.object(
-        service.geolocator,
-        "geocode",
-        side_effect=[mock_location_paris, mock_location_london],
+        service,
+        "get_coordinates",
+        side_effect=[(48.8566, 2.3522), (51.5074, -0.1278)],
     )
 
     results = service.process_itinerary_locations("Dummy text")
 
-    assert len(results) == 2, "Expected 2 locations processed"
+    assert len(results) == 2
     assert isinstance(results[0], Location)
     assert results[0].name == "Paris"
     assert results[0].lat == 48.8566
     assert results[1].name == "London"
     assert results[1].lat == 51.5074
-
-
-def test_extract_locations_empty_input() -> None:
-    """Testa extração com entrada vazia."""
-    service = GeocodingService()
-    locations = service.extract_locations("")
-
-    assert locations == [], "Expected empty list for empty input"
-
-
-def test_get_coordinates_empty_address() -> None:
-    """Testa coordenadas para endereço vazio."""
-    service = GeocodingService()
-    coords = service.get_coordinates("")
-
-    assert coords is None, "Expected None for empty address"

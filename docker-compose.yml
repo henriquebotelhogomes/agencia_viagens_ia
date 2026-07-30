@@ -1,7 +1,8 @@
 services:
   app:
-    build: 
+    build:
       context: .
+      target: runtime
     ports:
       - "8501:8501"
     env_file:
@@ -9,6 +10,8 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
+      # Compose local roda em modo dev (logs legíveis); Render usa production
+      - APP_ENV=local
     restart: unless-stopped
     healthcheck:
       # Using Python to check health since curl might not be available in slim image
@@ -22,14 +25,14 @@ services:
       - test
     build:
       context: .
+      # Estágio com dev deps + tests/ (ver Dockerfile, item S10 do PRD)
+      target: test
     env_file:
       - .env
-    volumes:
-      - .:/app
     environment:
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
     depends_on:
       app:
         condition: service_healthy
-    command: pytest tests/ -v --cov=src --cov-report=html
+    command: pytest tests/ -v --cov=src

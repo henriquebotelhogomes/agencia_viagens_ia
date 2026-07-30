@@ -1,14 +1,12 @@
-from typing import List, Optional
-
 from pydantic import BaseModel, Field
 
 
 class Location(BaseModel):
     name: str = Field(..., description="Nome do local (atração, restaurante ou hotel)")
-    lat: Optional[float] = Field(None, description="Latitude do local")
-    lon: Optional[float] = Field(None, description="Longitude do local")
+    lat: float | None = Field(None, description="Latitude do local")
+    lon: float | None = Field(None, description="Longitude do local")
     type: str = Field("marker", description="Tipo de marcador no mapa")
 
 
 class LocationList(BaseModel):
-    locations: List[Location] = Field(default_factory=list, max_length=10)
+    locations: list[Location] = Field(default_factory=list, max_length=10)

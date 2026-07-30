@@ -1,13 +1,39 @@
 from unittest.mock import MagicMock
 
 import pytest
-from dotenv import load_dotenv
 from pytest_mock import MockerFixture  # Import adicionado para type hints do mocker
 
 from src.config import Settings
 
-# Carrega variáveis de ambiente (apenas para testes locais; em CI, usar mocks)
-load_dotenv()
+# Variáveis sensíveis que NUNCA podem vazar do .env real para os testes
+# (padrão §8.1 do PRD: "sem chave real em teste, nunca").
+_SENSITIVE_ENV_VARS = (
+    "OPENCODE_API_KEY",
+    "OPENROUTER_API_KEY",
+    "TAVILY_API_KEY",
+    "GEOAPIFY_API_KEY",
+    "LANGFUSE_PUBLIC_KEY",
+    "LANGFUSE_SECRET_KEY",
+    "GROQ_API_KEY",
+    "GOOGLE_API_KEY",
+    "GEMINI_API_KEY",
+    "SERPER_API_KEY",
+    "REDIS_URL",
+    "DATABASE_URL",
+)
+
+
+@pytest.fixture(autouse=True)
+def isolate_secrets_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Remove chaves reais do ambiente antes de cada teste.
+
+    O CrewAI executa ``load_dotenv()`` no próprio import, contaminando
+    ``os.environ`` com o `.env` local — sem este fixture, um `Settings`
+    construído dentro do teste captaria chaves reais e faria chamadas de
+    rede verdadeiras (regressão detectada em 2026-07-29).
+    """
+    for var in _SENSITIVE_ENV_VARS:
+        monkeypatch.delenv(var, raising=False)
 
 
 @pytest.fixture(scope="session")
@@ -18,27 +44,19 @@ def mock_settings() -> Settings:
     Uso: Evita dependência de .env real em testes.
     """
     return Settings(
+        _env_file=None,
+        # Novos provedores (PRD D2, D10, D11, D12)
+        OPENCODE_API_KEY="mock_opencode_key",
+        OPENROUTER_API_KEY="mock_openrouter_key",
+        TAVILY_API_KEY="mock_tavily_key",
+        GEOAPIFY_API_KEY="mock_geoapify_key",
+        LANGFUSE_PUBLIC_KEY="mock_langfuse_public_key",
+        LANGFUSE_SECRET_KEY="mock_langfuse_secret_key",
+        # Legado (playground Streamlit)
         GROQ_API_KEY="mock_groq_key",
         SERPER_API_KEY="mock_serper_key",
         GOOGLE_API_KEY="mock_google_key",
     )
-
-
-@pytest.fixture
-def mock_nominatim(mocker: MockerFixture) -> MagicMock:
-    """
-    Fixture para mockar o serviço Nominatim da Geopy.
-    Retorna um mock com localização padrão para sucesso;
-    configure side_effect para erros.
-    Uso: Isola testes de chamadas de rede reais.
-    """
-    mock_geolocator = mocker.patch("src.services.geocoding_service.Nominatim")
-    mock_location = MagicMock()
-    mock_location.latitude = 12.34
-    mock_location.longitude = 56.78
-    mock_location.address = "Mocked Address"
-    mock_geolocator.return_value.geocode.return_value = mock_location
-    return mock_geolocator
 
 
 @pytest.fixture

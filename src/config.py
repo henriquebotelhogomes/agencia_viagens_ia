@@ -1,56 +1,177 @@
-from pathlib import Path
+"""Configuração centralizada da aplicação (12-factor, via Pydantic Settings).
 
-from pydantic import field_validator
+Referência das decisões: PRD.md §2 (D2, D10, D11, D12) e §8.2 (segredos).
+
+Segredos são declarados como ``SecretStr`` para não vazarem em ``repr``/logs.
+Use as propriedades em minúsculo para obter o valor em texto puro no ponto de uso.
+"""
+
+from functools import lru_cache
+from pathlib import Path
+from typing import Any, Literal
+
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Localiza o diretório raiz do projeto (onde está o .env)
 BASE_DIR = Path(__file__).resolve().parent.parent
 ENV_FILE = BASE_DIR / ".env"
 
+# Segredos: declarados juntos para o validador de sanitização
+_SECRET_FIELDS = (
+    "OPENCODE_API_KEY",
+    "OPENROUTER_API_KEY",
+    "TAVILY_API_KEY",
+    "GEOAPIFY_API_KEY",
+    "LANGFUSE_PUBLIC_KEY",
+    "LANGFUSE_SECRET_KEY",
+    "GROQ_API_KEY",
+    "SERPER_API_KEY",
+    "GOOGLE_API_KEY",
+)
+
 
 class Settings(BaseSettings):
-    # Nomes EXATOS das variáveis do .env (Puro Pydantic v2)
-    GROQ_API_KEY: str = ""
-    SERPER_API_KEY: str = ""
-    GOOGLE_API_KEY: str = ""
-    REDIS_URL: str = ""
-    CACHE_TTL_SECONDS: int = 86400  # 24 hours
+    """Configuração da aplicação, carregada de variáveis de ambiente e ``.env``."""
 
-    @field_validator("GROQ_API_KEY", "SERPER_API_KEY", "GOOGLE_API_KEY", mode="before")
+    # ------------------------------------------------------------------
+    # Aplicação
+    # ------------------------------------------------------------------
+    APP_ENV: Literal["local", "staging", "production"] = "local"
+    LOG_LEVEL: str = "INFO"
+    RATE_LIMIT_EXECUTIONS_PER_HOUR: int = 5
+
+    # ------------------------------------------------------------------
+    # LLM — gateway primário: OpenCode Go (PRD D2)
+    # ------------------------------------------------------------------
+    OPENCODE_API_KEY: SecretStr = SecretStr("")
+    OPENCODE_API_BASE: str = "https://opencode.ai/zen/go/v1"
+    LLM_MODEL_FAST: str = "deepseek-v4-flash"
+    LLM_MODEL_FAST_TOOLS: str = "kimi-k2.7-code"
+    # Teto de uso da aplicação no Go, preservando a cota pessoal de coding
+    LLM_GO_MAX_REQUESTS_PER_DAY: int = 200
+
+    # ------------------------------------------------------------------
+    # LLM — tier `pro` e fallback universal: OpenRouter (PRD D2)
+    # ------------------------------------------------------------------
+    OPENROUTER_API_KEY: SecretStr = SecretStr("")
+    LLM_MODEL_PRO: str = "openrouter/google/gemini-3.5-flash"
+    LLM_FALLBACK_FAST: str = "openrouter/google/gemini-3.5-flash"
+    LLM_FALLBACK_TOOLS: str = "openrouter/nvidia/nemotron-3-super-120b-a12b:free"
+
+    # ------------------------------------------------------------------
+    # Ferramentas dos agentes
+    # ------------------------------------------------------------------
+    TAVILY_API_KEY: SecretStr = SecretStr("")  # busca web (PRD D11)
+    GEOAPIFY_API_KEY: SecretStr = SecretStr("")  # geocoding (PRD D10)
+
+    # ------------------------------------------------------------------
+    # Observabilidade de LLM — Langfuse Cloud (PRD D12)
+    # ------------------------------------------------------------------
+    LANGFUSE_PUBLIC_KEY: SecretStr = SecretStr("")
+    LANGFUSE_SECRET_KEY: SecretStr = SecretStr("")
+    LANGFUSE_HOST: str = "https://cloud.langfuse.com"
+
+    # ------------------------------------------------------------------
+    # Infraestrutura
+    # ------------------------------------------------------------------
+    REDIS_URL: str = ""
+    REDIS_CONNECT_TIMEOUT: float = 2.0
+    DATABASE_URL: str = ""
+    CACHE_TTL_SECONDS: int = 86400  # 24 horas
+    # TTL longo: coordenadas de atrações turísticas raramente mudam
+    GEOCODING_CACHE_TTL_SECONDS: int = 2_592_000  # 30 dias
+
+    # ------------------------------------------------------------------
+    # LEGADO — em uso pelo playground Streamlit até concluir a Fase 0
+    # ------------------------------------------------------------------
+    GROQ_API_KEY: SecretStr = SecretStr("")
+    SERPER_API_KEY: SecretStr = SecretStr("")
+    GOOGLE_API_KEY: SecretStr = SecretStr("")
+
+    # ------------------------------------------------------------------
+    # Preços de referência (USD por 1M tokens) para o comparativo FinOps
+    # ------------------------------------------------------------------
+    price_gpt4o_input: float = 5.0
+    price_gpt4o_output: float = 15.0
+    price_groq_input: float = 0.59
+    price_groq_output: float = 0.79
+
+    # Geocoding — user_agent do Nominatim (fallback) e rate limit de 1 req/s
+    user_agent: str = "agencia_viagens_ia_portfolio"
+    geocoding_delay: float = 1.1
+
+    @field_validator(*_SECRET_FIELDS, mode="before")
     @classmethod
-    def strip_whitespace(cls, v: str) -> str:
+    def strip_whitespace(cls, v: Any) -> Any:
         """Remove espaços em branco acidentais das chaves de API."""
         if isinstance(v, str):
             return v.strip()
         return v
 
-    # Atalhos em minúsculo para manter a compatibilidade com o resto do código
+    # ------------------------------------------------------------------
+    # Acesso aos segredos em texto puro (uso pontual, nunca em log)
+    # ------------------------------------------------------------------
+    @property
+    def opencode_api_key(self) -> str:
+        return self.OPENCODE_API_KEY.get_secret_value()
+
+    @property
+    def openrouter_api_key(self) -> str:
+        return self.OPENROUTER_API_KEY.get_secret_value()
+
+    @property
+    def tavily_api_key(self) -> str:
+        return self.TAVILY_API_KEY.get_secret_value()
+
+    @property
+    def geoapify_api_key(self) -> str:
+        return self.GEOAPIFY_API_KEY.get_secret_value()
+
+    @property
+    def langfuse_public_key(self) -> str:
+        return self.LANGFUSE_PUBLIC_KEY.get_secret_value()
+
+    @property
+    def langfuse_secret_key(self) -> str:
+        return self.LANGFUSE_SECRET_KEY.get_secret_value()
+
     @property
     def groq_api_key(self) -> str:
-        return self.GROQ_API_KEY
+        return self.GROQ_API_KEY.get_secret_value()
 
     @property
     def serper_api_key(self) -> str:
-        return self.SERPER_API_KEY
+        return self.SERPER_API_KEY.get_secret_value()
 
     @property
     def google_api_key(self) -> str:
-        return self.GOOGLE_API_KEY
+        return self.GOOGLE_API_KEY.get_secret_value()
 
-    # Configurações de Modelos e Preços
-    model_pro: str = "groq/llama-3.3-70b-versatile"
-    model_fast: str = "groq/llama-3.1-8b-instant"
-    model_extractor: str = "llama-3.3-70b-versatile"
-    model_pro_fallback: str = "gemini/gemini-flash-latest"
-    model_fast_fallback: str = "gemini/gemini-flash-latest"
+    # ------------------------------------------------------------------
+    # Flags derivadas — habilitam degradação graciosa por serviço
+    # ------------------------------------------------------------------
+    @property
+    def is_production(self) -> bool:
+        return self.APP_ENV == "production"
 
-    # Configs Financeiras e GPS
-    price_gpt4o_input: float = 5.0
-    price_gpt4o_output: float = 15.0
-    price_groq_input: float = 0.59
-    price_groq_output: float = 0.79
-    user_agent: str = "agencia_viagens_ia_portfolio"
-    geocoding_delay: float = 1.1
+    @property
+    def cache_enabled(self) -> bool:
+        return bool(self.REDIS_URL)
+
+    @property
+    def langfuse_enabled(self) -> bool:
+        return bool(self.langfuse_public_key and self.langfuse_secret_key)
+
+    @property
+    def opencode_enabled(self) -> bool:
+        """Indica se o gateway primário de LLM está configurado."""
+        return bool(self.opencode_api_key)
+
+    @property
+    def openrouter_enabled(self) -> bool:
+        """Indica se o fallback/tier `pro` de LLM está configurado."""
+        return bool(self.openrouter_api_key)
 
     # O motor que lê o arquivo .env
     model_config = SettingsConfigDict(
@@ -58,5 +179,17 @@ class Settings(BaseSettings):
     )
 
 
-# Singleton instance
-settings = Settings()
+@lru_cache(maxsize=1)
+def get_settings() -> Settings:
+    """Retorna a configuração da aplicação (memoizada).
+
+    Forma preferida de obter a configuração: permite injeção de dependência
+    (ex.: ``Depends(get_settings)`` no FastAPI) e substituição em testes via
+    ``get_settings.cache_clear()``.
+    """
+    return Settings()
+
+
+# Instância de módulo mantida por compatibilidade com o código atual.
+# Será removida com a conclusão do item S2 do PRD (injeção de dependência).
+settings = get_settings()

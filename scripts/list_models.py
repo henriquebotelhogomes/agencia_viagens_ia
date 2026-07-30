@@ -1,9 +1,20 @@
+"""Utilitário de diagnóstico: lista os modelos Gemini disponíveis para a chave.
+
+Uso (a partir da raiz do projeto):
+    uv run python -m scripts.list_models
+"""
+
 import google.generativeai as genai
 
-from src.config import settings
+from src.config import get_settings
 
 
-def list_gemini_models():
+def list_gemini_models() -> None:
+    settings = get_settings()
+    if not settings.google_api_key:
+        print("GOOGLE_API_KEY não configurada no .env — nada a listar.")
+        return
+
     print(f"Testing with Key: {settings.google_api_key[:10]}...")
     genai.configure(api_key=settings.google_api_key)
     try:

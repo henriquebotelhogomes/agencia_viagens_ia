@@ -68,7 +68,7 @@ def test_build_crew_complete(
     # Usamos assert_called_once() e depois inspecionamos os argumentos
     # para maior robustez com Pydantic
     mock_crew.assert_called_once()
-    args, kwargs = mock_crew.call_args
+    _, kwargs = mock_crew.call_args
     assert kwargs["agents"] == [mock_crew_agent.return_value] * 3
     assert kwargs["tasks"] == [mock_crew_task.return_value] * 3
     assert kwargs["verbose"] is True

@@ -1,38 +1,68 @@
-# Use a standard Python image
-FROM python:3.12-slim-bookworm
+# syntax=docker/dockerfile:1
+# Dockerfile multi-stage (item S10 do PRD):
+#   builder -> dependências e código de produção (sem dev)
+#   test    -> imagem para o CI rodar a suite (dev deps + tests/)
+#   runtime -> imagem final enxuta, rodando como usuário non-root
 
-# Install uv binary from the official image
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uv/bin/uv
+############################################
+# Estágio 1: builder — deps de produção
+############################################
+FROM python:3.12-slim-bookworm AS builder
 
-# Set work directory
+# Binário do uv a partir da imagem oficial
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
+
 WORKDIR /app
 
-# Enable bytecode compilation
-ENV UV_COMPILE_BYTECODE=1
-
-# Copy dependency files
+# Camada de dependências (cacheável enquanto o lock não mudar)
 COPY pyproject.toml uv.lock ./
-
-# Install dependencies using the uv binary 
-# (This is very fast and ensures the venv is built for the container's OS)
 RUN --mount=type=cache,target=/root/.cache/uv \
-    /uv/bin/uv sync --frozen --no-install-project
+    uv sync --frozen --no-install-project --no-dev
 
-# Copy the rest of the application
-COPY . .
+# COPY seletivo do código (nada de `COPY . .`)
+# README.md é exigido pelo hatchling (metadado `readme` do pyproject)
+COPY README.md ./
+COPY src/ src/
+COPY app.py ./
 
-# Final sync to include project code
 RUN --mount=type=cache,target=/root/.cache/uv \
-    /uv/bin/uv sync --frozen
+    uv sync --frozen --no-dev
 
-# Expose Streamlit port
+############################################
+# Estágio 2: test — usado apenas pelo CI
+# docker build --target test -t app:test .
+############################################
+FROM builder AS test
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen
+
+COPY tests/ tests/
+
+ENV PATH="/app/.venv/bin:$PATH"
+
+CMD ["pytest", "tests/", "-v"]
+
+############################################
+# Estágio 3: runtime — produção non-root
+############################################
+FROM python:3.12-slim-bookworm AS runtime
+
+# Usuário sem privilégios (CIS Docker Benchmark)
+RUN groupadd --system app && useradd --system --gid app --create-home app
+
+WORKDIR /app
+COPY --from=builder --chown=app:app /app /app
+
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    APP_ENV=production
+
+USER app
+
 EXPOSE 8501
 
-# Place uv in PATH
-ENV PATH="/app/.venv/bin:/uv/bin:$PATH"
-
-# Default entrypoint for maximum flexibility
-ENTRYPOINT ["uv", "run"]
-
-# Default command to run Streamlit
 CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]

@@ -9,10 +9,8 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    env:
-      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-      SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
-      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+    # Testes unitários não usam chaves reais (item S11 do PRD):
+    # todos os serviços externos são mockados.
     steps:
       - uses: actions/checkout@v4
 
@@ -22,26 +20,22 @@ jobs:
           python-version: '3.12'
 
       - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+        uses: astral-sh/setup-uv@v5
 
       - name: Install dependencies
-        run: |
-          pip install uv
-          uv sync --group dev
+        run: uv sync --group dev
 
       - name: Ruff Check (lint)
-        run: uv run ruff check src/ tests/
+        run: uv run ruff check src/ tests/ app.py scripts/
 
       - name: Ruff Format (check style)
-        run: uv run ruff format src/ tests/ --check
-
-      - name: Black (formatting check)
-        run: uv run black src/ tests/ --check
+        run: uv run ruff format src/ tests/ app.py scripts/ --check
 
       - name: Mypy (strict type checking)
         run: uv run mypy src/ --strict
 
       - name: Run tests with coverage
+        # O gate de cobertura (fail_under=90) está no pyproject.toml
         run: uv run pytest tests/ -v --cov=src --cov-report=xml
 
       - name: Upload coverage to Codecov
@@ -50,6 +44,39 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage.xml
 
+  docs:
+    name: Documentação viva (PRD D13)
+    runs-on: ubuntu-latest
+    permissions:
+      # Necessário para o gh-deploy publicar no branch gh-pages
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies (docs + projeto)
+        # mkdocstrings importa os módulos para ler os docstrings,
+        # portanto precisa do projeto instalado.
+        run: uv sync --group docs
+
+      - name: Build docs (strict)
+        # --strict falha em link quebrado, referência órfã ou aviso
+        run: uv run mkdocs build --strict
+
+      - name: Deploy no GitHub Pages
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          uv run mkdocs gh-deploy --force
+
   docker-check:
     needs: quality
     runs-on: ubuntu-latest
@@ -57,13 +84,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Docker image
-        run: docker build -t agencia-viagens-ia .
+      - name: Build test image (estágio com dev deps + tests)
+        run: docker build --target test -t agencia-viagens-ia:test .
 
       - name: Run tests inside container
-        run: |
-          docker run --rm \
-            -e GROQ_API_KEY=${{ secrets.GROQ_API_KEY }} \
-            -e SERPER_API_KEY=${{ secrets.SERPER_API_KEY }} \
-            -e GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }} \
-            agencia-viagens-ia pytest tests/ -v
+        run: docker run --rm agencia-viagens-ia:test
+
+      - name: Build production image (runtime non-root)
+        run: docker build --target runtime -t agencia-viagens-ia .

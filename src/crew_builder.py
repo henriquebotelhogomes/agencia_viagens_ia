@@ -1,30 +1,45 @@
-from typing import Any, Optional, cast
+"""Orquestração da equipe (Crew) de planejamento de viagens."""
+
+from typing import Any
 
 from crewai import Agent, Crew, Process, Task
+from loguru import logger
 
 from src.agents import TravelAgents
+from src.config import Settings
 from src.tasks import TravelTasks
+from src.utils.localization import DEFAULT_CURRENCY, DEFAULT_LANGUAGE
 
 
 class CrewBuilder:
     """
     Orquestra a equipa (Crew) e inicia o processo.
+
+    A configuração é injetada (item S2 do PRD); quando omitida, os componentes
+    resolvem a configuração padrão sob demanda.
     """
 
     def __init__(
         self,
+        settings: Settings | None = None,
+        *,
         destino: str = "",
         dias: int = 1,
         origem: str = "",
         interesses: str = "",
-        settings: Any = None,
+        moeda: str = DEFAULT_CURRENCY,
+        idioma: str = DEFAULT_LANGUAGE,
+        use_fallback: bool = False,
     ) -> None:
+        self.settings = settings
         self.destino = destino
         self.dias = dias
         self.origem = origem
         self.interesses = interesses
-        self.settings = settings
-        self.agents_factory = TravelAgents()
+        self.moeda = moeda
+        self.idioma = idioma
+        self.use_fallback = use_fallback
+        self.agents_factory = TravelAgents(settings, use_fallback=use_fallback)
         self.tasks_factory = TravelTasks()
 
     def create_local_expert_agent(self) -> Agent:
@@ -33,7 +48,7 @@ class CrewBuilder:
 
     def create_logistics_manager_agent(self) -> Agent:
         """Factory method para o agente Gerente de Logística."""
-        return self.agents_factory.logistics_manager()
+        return self.agents_factory.logistics_manager(moeda=self.moeda)
 
     def create_itinerary_architect_agent(self) -> Agent:
         """Factory method para o agente Arquiteto de Roteiros."""
@@ -41,32 +56,38 @@ class CrewBuilder:
 
     def create_research_task(self, agent: Agent, destino: str, interesses: str) -> Task:
         """Cria a tarefa de pesquisa."""
-        return self.tasks_factory.research_destination(agent, destino, interesses)
+        return self.tasks_factory.research_destination(
+            agent, destino, interesses, idioma=self.idioma
+        )
 
     def create_logistics_task(
         self, agent: Agent, destino: str, dias: int, origem: str
     ) -> Task:
         """Cria a tarefa de logística."""
-        return self.tasks_factory.calculate_logistics(agent, destino, dias, origem)
+        return self.tasks_factory.calculate_logistics(
+            agent, destino, dias, origem, moeda=self.moeda, idioma=self.idioma
+        )
 
     def create_itinerary_task(
         self, agent: Agent, destino: str, dias: int, interesses: str
     ) -> Task:
         """Cria a tarefa de roteiro."""
-        return self.tasks_factory.compile_itinerary(agent, destino, dias, interesses)
+        return self.tasks_factory.compile_itinerary(
+            agent, destino, dias, interesses, moeda=self.moeda, idioma=self.idioma
+        )
 
     def build_crew(
         self,
         destino: str,
         dias: int,
         interesses: str,
-        origem: Optional[str] = None,
+        origem: str | None = None,
     ) -> Crew:
         """
         Constrói a equipa (Crew) completa com agentes e tarefas.
         """
-        # Se origem não for passada, usa a da instância se existir
-        origem = cast(str, origem or getattr(self, "origem", "São Paulo, Brasil"))
+        # Se origem não for passada, usa a da instância
+        origem = origem or self.origem
 
         # 1. Cria os Agentes
         expert = self.create_local_expert_agent()
@@ -90,6 +111,30 @@ class CrewBuilder:
         )
 
     def run(self) -> Any:
-        # Utiliza o build_crew para manter consistência
+        """Executa a crew com failover de gateway de LLM (PRD D2).
+
+        Tenta o gateway primário (OpenCode Go) e, em qualquer falha — `429`,
+        teto de orçamento, indisponibilidade —, repete uma vez no OpenRouter.
+        Assim a demo nunca bloqueia por causa da cota compartilhada do Go.
+        """
         crew = self.build_crew(self.destino, self.dias, self.interesses, self.origem)
-        return crew.kickoff()
+        try:
+            return crew.kickoff()
+        except Exception as e:
+            if self.use_fallback:
+                raise  # já estamos no fallback: propaga
+            logger.warning(
+                f"Gateway primário de LLM falhou ({e}); "
+                "repetindo a execução no OpenRouter."
+            )
+            fallback_builder = CrewBuilder(
+                self.settings,
+                destino=self.destino,
+                dias=self.dias,
+                origem=self.origem,
+                interesses=self.interesses,
+                moeda=self.moeda,
+                idioma=self.idioma,
+                use_fallback=True,
+            )
+            return fallback_builder.run()

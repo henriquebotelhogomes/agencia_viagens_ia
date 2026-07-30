@@ -6,36 +6,46 @@ authors = [
     { name = "Henrique Botelho Gomes", email = "" }
 ]
 readme = "README.md"
-requires-python = ">=3.10"
+# Alinhado com .python-version, Dockerfile e CI (todos usam 3.12)
+requires-python = ">=3.12"
 dependencies = [
-    "crewai",
-    "crewai-tools",
-    "langchain-groq",
-    "langchain-google-genai",
-    "requests",
-    "pydantic",
-    "streamlit",
-    "python-dotenv",
-    "litellm",
-    "folium",
-    "streamlit-folium",
-    "geopy",
-    "pydantic-settings",
-    "google-generativeai>=0.8.6",
-    "loguru",
-    "redis",
+    # Ranges com teto de major/minor (item S13 do PRD): upgrades de major
+    # são conscientes, nunca silenciosos. Versões exatas ficam no uv.lock.
+    "crewai>=1.12,<2.0",
+    "crewai-tools>=1.12,<2.0",
+    "langchain-groq>=1.1,<2.0",
+    "langchain-google-genai>=4.2,<5.0",
+    "requests>=2.32,<3.0",
+    "pydantic>=2.11,<3.0",
+    "streamlit>=1.55,<2.0",
+    "python-dotenv>=1.1,<2.0",
+    "litellm>=1.82,<2.0",
+    "folium>=0.20,<1.0",
+    "streamlit-folium>=0.27,<1.0",
+    "geopy>=2.4,<3.0",
+    "pydantic-settings>=2.10,<3.0",
+    "google-generativeai>=0.8.6,<0.9",
+    "loguru>=0.7,<1.0",
+    "redis>=7.4,<8.0",
+    "langfuse>=2.59,<3.0",
+    "tavily-python>=0.5,<1.0",
 ]
 
 [dependency-groups]
 dev = [
-    "pytest>=7.0.0",
-    "ruff>=0.1.0",
-    "black>=24.0.0",
-    "mypy>=1.0.0",
-    "pytest-mock>=3.10.0",
-    "pytest-cov>=4.1.0",
+    "pytest>=9.0,<10.0",
+    "ruff>=0.15,<1.0",
+    "mypy>=1.19,<2.0",
+    "pytest-mock>=3.15,<4.0",
+    "pytest-cov>=7.1,<8.0",
     "types-requests",
-    "pre-commit",
+    "pre-commit>=4.5,<5.0",
+]
+# Documentação viva (PRD D13 / §8.5) — grupo separado para não pesar o dev
+docs = [
+    "mkdocs>=1.6,<2.0",
+    "mkdocs-material>=9.5,<10.0",
+    "mkdocstrings[python]>=0.27,<1.0",
 ]
 
 [tool.uv]
@@ -44,12 +54,33 @@ environments = ["sys_platform == 'win32'", "sys_platform == 'linux'"]
 
 [tool.ruff]
 line-length = 88
+target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "W"]
+# Padrão de qualidade do projeto (PRD §8.6):
+# E/W pycodestyle · F pyflakes · I isort · B bugbear (bugs latentes) ·
+# UP pyupgrade (sintaxe moderna) · SIM simplificações · C4 comprehensions ·
+# N naming PEP8 · RUF regras do Ruff · PTH pathlib · ARG argumentos não usados
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "C4", "N", "RUF", "PTH", "ARG"]
+
+[tool.ruff.lint.per-file-ignores]
+# Fixtures do pytest são injetadas por nome e nem sempre referenciadas no corpo
+"tests/**" = ["ARG"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+source = ["src"]
+
+[tool.coverage.report]
+# Gate de cobertura (PRD §8.1): abaixo disso o CI falha. Atual: ~96%.
+fail_under = 90
+show_missing = true
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.12"
 strict = true
 ignore_missing_imports = true
 explicit_package_bases = true

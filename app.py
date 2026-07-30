@@ -1,33 +1,27 @@
 import io
 
 import folium
-import os
-import redis
 import streamlit as st
-
-# Proactively check Redis connection before any CrewAI/litellm imports
-_redis_url = os.environ.get("REDIS_URL")
-if _redis_url:
-    try:
-        # Use a short timeout to not delay app startup significantly
-        _r = redis.from_url(_redis_url, socket_connect_timeout=1)
-        _r.ping()
-    except Exception:
-        # If Redis is unreachable, purge it from the environment immediately!
-        # This prevents other libraries from picking it up and crashing later.
-        os.environ.pop("REDIS_URL", None)
-
-# Importações do Projeto
-from src.crew_builder import CrewBuilder
 from streamlit_folium import st_folium
 
-from src.services.cache_service import cache_service
+from src.crew_builder import CrewBuilder
+from src.runtime import configure_llm_runtime
+from src.services.cache_service import get_cache_service
 from src.services.finance_service import FinanceService
 from src.services.geocoding_service import GeocodingService
+from src.utils.localization import (
+    CURRENCY_SYMBOLS,
+    LANGUAGE_NAMES,
+    currency_label,
+    language_name,
+)
 from src.utils.logger import LOG_DIR, add_streamlit_sink, setup_logger
 
 # Configuração do Logger Centralizado
 logger = setup_logger()
+
+# Inicialização explícita do runtime (LiteLLM, chaves, Redis) — item S1 do PRD
+configure_llm_runtime()
 logger.info("Aplicação Iniciada.")
 
 # Configuração da Página
@@ -42,7 +36,8 @@ st.set_page_config(
 # Inicialização de Serviços (Singletons de facto dentro do contexto do Streamlit)
 @st.cache_resource
 def get_geocoding_service():
-    return GeocodingService()
+    # Cache Redis de geocoding (PRD D10): TTL longo p/ coordenadas de atrações
+    return GeocodingService(cache=get_cache_service())
 
 
 @st.cache_resource
@@ -52,6 +47,7 @@ def get_finance_service():
 
 geo_service = get_geocoding_service()
 fin_service = get_finance_service()
+cache_service = get_cache_service()
 
 
 # Funções Auxiliares de Cache
@@ -75,7 +71,7 @@ with st.sidebar:
     try:
         log_path = LOG_DIR / "app.log"
         if log_path.exists():
-            with open(log_path, "rb") as f:
+            with log_path.open("rb") as f:
                 st.download_button(
                     label="📥 Baixar Logs Completos (.log)",
                     data=f,
@@ -105,6 +101,23 @@ with st.form("travel_form"):
             "🎭 Interesses", placeholder="Ex: Museus, gastronomia, parques..."
         )
 
+    # Localização do roteiro (item S14 do PRD / FR-10)
+    col3, col4 = st.columns(2)
+    with col3:
+        moeda = st.selectbox(
+            "💱 Moeda",
+            options=list(CURRENCY_SYMBOLS.keys()),
+            index=0,
+            format_func=currency_label,
+        )
+    with col4:
+        idioma = st.selectbox(
+            "🌐 Idioma do Roteiro",
+            options=list(LANGUAGE_NAMES.keys()),
+            index=0,
+            format_func=language_name,
+        )
+
     submitted = st.form_submit_button(
         "🚀 Planejar Roteiro Profissional", use_container_width=True
     )
@@ -118,15 +131,14 @@ if submitted:
 
         # Verifica cache
         cached_itinerary = cache_service.get_cached_itinerary(
-            origem, destino, dias, interesses
+            origem, destino, dias, interesses, moeda=moeda, idioma=idioma
         )
 
         if cached_itinerary:
             st.success("⚡ Roteiro recuperado do Cache instantaneamente!")
             final_itinerary = cached_itinerary
-            logs_for_finops = (
-                "✨ Custos FinOps: $0.00 (Servido diretamente do Cache)"
-            )
+            token_usage = None  # sem execução de LLM — custo zero
+            logs_for_finops = "✨ Custos FinOps: $0.00 (Servido diretamente do Cache)"
         else:
             # Container para Logs Vivos
             log_expander = st.expander(
@@ -135,8 +147,6 @@ if submitted:
             log_placeholder = log_expander.empty()
 
             # Captura de logs via Loguru Sink (Streamlit + Buffer para FinOps)
-            import io
-
             log_buffer = io.StringIO()
 
             log_sink_id = add_streamlit_sink(log_placeholder)
@@ -145,32 +155,33 @@ if submitted:
             logger.info(f"Iniciando planejamento para {destino}...")
 
             final_itinerary = None
+            token_usage = None
             try:
                 with st.spinner(f"A equipe está mapeando {destino}..."):
                     trip_crew = CrewBuilder(
-                        destino=destino, dias=dias, origem=origem, interesses=interesses
+                        destino=destino,
+                        dias=dias,
+                        origem=origem,
+                        interesses=interesses,
+                        moeda=moeda,
+                        idioma=idioma,
                     )
                     final_itinerary = trip_crew.run()
+                    # Tokens reais da execução (item S4 do PRD)
+                    token_usage = getattr(final_itinerary, "token_usage", None)
                     if final_itinerary:
                         cache_service.save_itinerary(
-                            origem, destino, dias, interesses, str(final_itinerary)
+                            origem,
+                            destino,
+                            dias,
+                            interesses,
+                            str(final_itinerary),
+                            moeda=moeda,
+                            idioma=idioma,
                         )
             except Exception as e:
-                # Se chegarmos aqui, algo na orquestração falhou (pode ser o Redis ou a própria Crew)
-                msg_erro = str(e)
-                if "connecting to" in msg_erro.lower():
-                    logger.warning(
-                        f"⚠️ Aviso de Rede (Cache): {msg_erro}. O sistema está tentando prosseguir automaticamente..."
-                    )
-                    # Tentamos o RETRY agora que o CacheService já limpou o REDIS_URL do ambiente
-                    try:
-                        final_itinerary = trip_crew.run()
-                    except Exception as retry_e:
-                        logger.error(f"Erro fatal na segunda tentativa: {retry_e}")
-                        st.error(f"Erro persistente na orquestração: {retry_e}")
-                else:
-                    logger.error(f"Erro crítico na orquestração: {msg_erro}")
-                    st.error(f"Erro na orquestração: {msg_erro}")
+                logger.error(f"Erro crítico na orquestração: {e}")
+                st.error(f"Erro na orquestração: {e}")
             finally:
                 # Remove os sinks para não vazar logs na próxima rodada
                 logger.remove(log_sink_id)
@@ -246,19 +257,38 @@ if submitted:
             with tab3:
                 st.markdown("### 📊 Análise de Custos e Performance")
 
-                # Usamos o buffer capturado especificamente para esta rodada
+                # Preferência: tokens REAIS da execução (S4); heurística só como
+                # último recurso (ex.: roteiro servido do cache)
                 try:
-                    stats = fin_service.estimate_costs(logs_for_finops)
+                    if token_usage is not None:
+                        stats = fin_service.estimate_costs_from_usage(
+                            prompt_tokens=getattr(token_usage, "prompt_tokens", 0),
+                            completion_tokens=getattr(
+                                token_usage, "completion_tokens", 0
+                            ),
+                        )
+                        st.caption(
+                            f"✅ Tokens reais da execução: "
+                            f"{int(stats['total_tokens'])} "
+                            "(medidos pelo CrewAI, não estimados)."
+                        )
+                    else:
+                        stats = fin_service.estimate_costs(logs_for_finops)
+                        st.caption(
+                            "Sem execução de LLM nesta rodada (cache) — "
+                            "valores estimados por heurística."
+                        )
                 except Exception as e:
                     logger.warning(f"Erro no cálculo FinOps: {e}")
                     stats = fin_service.estimate_costs("")
 
                 st.success(
-                    f"💡 **Economia:** Ao usar Llama 3 via Groq, você economizou "
-                    f"**${stats['savings']:.4f}** comparado ao GPT-4o."
+                    f"💡 **Economia:** Com o stack OpenCode Go + OpenRouter, você "
+                    f"economizou **${stats['savings']:.4f}** comparado ao GPT-4o."
                 )
 
                 st.caption("""
-                *Nota: Os custos são baseados em heurísticas de volume de tokens.
-                Os valores do Groq refletem os preços atuais por 1M de tokens.*
+                *Nota: o comparativo usa os preços públicos por 1M de tokens do
+                GPT-4o vs. o stack atual. O trace completo (por agente/chamada)
+                fica no Langfuse.*
                 """)

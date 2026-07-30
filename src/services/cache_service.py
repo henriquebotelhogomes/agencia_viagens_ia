@@ -1,53 +1,84 @@
+"""Cache de roteiros em Redis.
+
+O serviço degrada graciosamente: sem ``REDIS_URL`` ou com o Redis inacessível,
+as operações se tornam no-ops e a aplicação segue funcionando.
+
+Nota (S1 do PRD): este módulo **não** muta ``os.environ``. A supressão de um Redis
+quebrado para as bibliotecas de LLM é feita explicitamente pelo runtime
+(``src.runtime.configure_llm_runtime``), nunca como efeito colateral de import.
+"""
+
 import hashlib
-from typing import Optional
+from functools import lru_cache
 
 import redis
 from loguru import logger
 
-from src.config import settings
+from src.config import Settings, get_settings
+from src.utils.localization import DEFAULT_CURRENCY, DEFAULT_LANGUAGE
 
 
 class CacheService:
-    def __init__(self) -> None:
-        self.enabled = bool(settings.REDIS_URL)
-        self.client = None
+    def __init__(self, settings: Settings | None = None) -> None:
+        self.settings = settings or get_settings()
+        self.enabled = self.settings.cache_enabled
+        self.client: redis.Redis | None = None
+
         if self.enabled:
             try:
-                # We expect something like redis://username:password@host:port/db
-                self.client = redis.from_url(settings.REDIS_URL, decode_responses=True)
-                # Ping to check if connection is actually working
+                self.client = redis.from_url(
+                    self.settings.REDIS_URL,
+                    decode_responses=True,
+                    socket_connect_timeout=self.settings.REDIS_CONNECT_TIMEOUT,
+                )
+                # Ping para confirmar que a conexão realmente funciona
                 self.client.ping()
                 logger.info("🟢 Redis Cache Service configurado com sucesso.")
             except Exception as e:
-                import os
-
                 logger.warning(
-                    "🔴 Falha de rede no Redis. Limpando ambiente e desativando cache "
-                    f"para garantir estabilidade. Erro: {e}"
+                    "🔴 Redis inacessível. Cache desativado para garantir "
+                    f"estabilidade (a aplicação segue normalmente). Erro: {e}"
                 )
-                # Removemos a URL do ambiente para que outras libs (CrewAI/LangChain)
-                # não tentem usar o host quebrado e causem crash na orquestração.
-                os.environ.pop("REDIS_URL", None)
+                self.client = None
                 self.enabled = False
 
     def _generate_key(
-        self, origin: str, destination: str, duration: int, interests: str
+        self,
+        origin: str,
+        destination: str,
+        duration: int,
+        interests: str,
+        moeda: str = DEFAULT_CURRENCY,
+        idioma: str = DEFAULT_LANGUAGE,
     ) -> str:
-        """Gera um hash único baseado nos parâmetros de busca da viagem."""
+        """Gera um hash único baseado nos parâmetros de busca da viagem.
+
+        Moeda e idioma compõem a chave (item S14 do PRD): um roteiro em
+        pt-BR/BRL não pode ser servido para um pedido em en-US/USD.
+        """
         raw_key = (
             f"{origin.lower().strip()}_{destination.lower().strip()}_"
-            f"{duration}_{interests.lower().strip()}"
+            f"{duration}_{interests.lower().strip()}_"
+            f"{moeda.upper().strip()}_{idioma.lower().strip()}"
         )
         return f"itinerary:{hashlib.sha256(raw_key.encode()).hexdigest()}"
 
     def get_cached_itinerary(
-        self, origin: str, destination: str, duration: int, interests: str
-    ) -> Optional[str]:
+        self,
+        origin: str,
+        destination: str,
+        duration: int,
+        interests: str,
+        moeda: str = DEFAULT_CURRENCY,
+        idioma: str = DEFAULT_LANGUAGE,
+    ) -> str | None:
         """Tenta buscar o roteiro no cache do Redis."""
         if not self.enabled or not self.client:
             return None
 
-        key = self._generate_key(origin, destination, duration, interests)
+        key = self._generate_key(
+            origin, destination, duration, interests, moeda, idioma
+        )
         try:
             cached_data = self.client.get(key)
             if cached_data:
@@ -59,20 +90,36 @@ class CacheService:
         return None
 
     def save_itinerary(
-        self, origin: str, destination: str, duration: int, interests: str, content: str
+        self,
+        origin: str,
+        destination: str,
+        duration: int,
+        interests: str,
+        content: str,
+        moeda: str = DEFAULT_CURRENCY,
+        idioma: str = DEFAULT_LANGUAGE,
     ) -> None:
         """Salva o roteiro gerado no Redis."""
         if not self.enabled or not self.client:
             return
 
-        key = self._generate_key(origin, destination, duration, interests)
+        key = self._generate_key(
+            origin, destination, duration, interests, moeda, idioma
+        )
         try:
-            # Save string with expiration
-            self.client.setex(key, settings.CACHE_TTL_SECONDS, content)
+            # Salva a string com expiração
+            self.client.setex(key, self.settings.CACHE_TTL_SECONDS, content)
             logger.info("💾 Roteiro salvo no cache do Redis.")
         except Exception as e:
             logger.error(f"⚠️ Erro ao salvar no Redis: {e}")
 
 
-# Singleton instance
-cache_service = CacheService()
+@lru_cache(maxsize=1)
+def get_cache_service() -> CacheService:
+    """Retorna o serviço de cache (memoizado).
+
+    Forma preferida de obter o serviço: nada é conectado no import do módulo,
+    apenas no primeiro uso real (item S2 do PRD). Em testes, use
+    ``get_cache_service.cache_clear()`` para reinicializar.
+    """
+    return CacheService()
