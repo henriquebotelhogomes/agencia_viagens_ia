@@ -48,23 +48,24 @@ def test_import_of_domain_modules_has_no_side_effects() -> None:
 
 def test_export_provider_env_does_not_overwrite_existing(mocker) -> None:
     """Chaves já presentes no ambiente têm precedência."""
-    mocker.patch.dict(os.environ, {"GROQ_API_KEY": "from_environment"}, clear=True)
-    settings = Settings(_env_file=None, GROQ_API_KEY="from_settings")
+    mocker.patch.dict(
+        os.environ, {"OPENROUTER_API_KEY": "from_environment"}, clear=True
+    )
+    settings = Settings(_env_file=None, OPENROUTER_API_KEY="from_settings")
 
     _export_provider_env(settings)
 
-    assert os.environ["GROQ_API_KEY"] == "from_environment"
+    assert os.environ["OPENROUTER_API_KEY"] == "from_environment"
 
 
 def test_export_provider_env_fills_missing_keys(mocker) -> None:
     """Chaves ausentes no ambiente são preenchidas a partir da configuração."""
     mocker.patch.dict(os.environ, {}, clear=True)
-    settings = Settings(_env_file=None, GOOGLE_API_KEY="google_key")
+    settings = Settings(_env_file=None, OPENROUTER_API_KEY="openrouter_key")
 
     _export_provider_env(settings)
 
-    assert os.environ["GOOGLE_API_KEY"] == "google_key"
-    assert os.environ["GEMINI_API_KEY"] == "google_key"
+    assert os.environ["OPENROUTER_API_KEY"] == "openrouter_key"
     # Chaves vazias não são exportadas
     assert "TAVILY_API_KEY" not in os.environ
 

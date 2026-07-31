@@ -1,55 +1,25 @@
 import io
 import json
-import sys
-from pathlib import Path
 
 from loguru import logger
 
-# Adiciona o diretório src ao path se necessário
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-
 from src.config import Settings
-from src.utils.logger import add_streamlit_sink, setup_logger
+from src.utils.logger import setup_logger
 
 
-class MockPlaceholder:
-    def __init__(self):
-        self.output = ""
-
-    def code(self, content, language="text"):
-        self.output = content
-
-
-def test_logger_flow():
-    # 1. Configura
+def test_dynamic_sink_receives_messages() -> None:
+    """Sinks dinâmicos (ex.: buffer do FinOps) recebem as mensagens logadas."""
     setup_logger()
-    mock_st = MockPlaceholder()
 
-    # 2. Adiciona Sink do Streamlit
-    sink_id = add_streamlit_sink(mock_st)
-
-    # 3. Loga algo
-    test_msg = "Mensagem de Teste para o Agente"
-    logger.info(test_msg)
-
-    # 4. Verifica
-    assert test_msg in mock_st.output
-    print("✓ Loguru integration with Streamlit Sink working.")
-
-    # 5. Testa Buffer do FinOps
     log_buffer = io.StringIO()
     buf_id = logger.add(log_buffer, format="{message}", level="INFO")
 
-    another_msg = "Outra mensagem para FinOps"
-    logger.info(another_msg)
+    message = "Mensagem de teste para o buffer"
+    logger.info(message)
 
-    assert another_msg in log_buffer.getvalue()
-    print("✓ Loguru integration with Resource Buffer working.")
+    assert message in log_buffer.getvalue()
 
-    # 6. Cleanup
-    logger.remove(sink_id)
     logger.remove(buf_id)
-    print("✓ Cleanup successful.")
 
 
 def test_production_logs_are_json_on_stdout(capsys) -> None:
@@ -87,12 +57,3 @@ def test_setup_logger_survives_unwritable_log_dir(mocker) -> None:
     logger.info("segue funcionando sem arquivo")
 
     setup_logger(Settings(_env_file=None))
-
-
-if __name__ == "__main__":
-    try:
-        test_logger_flow()
-        print("\nSUCCESS: Logger infrastructure is robust.")
-    except Exception as e:
-        print(f"\nFAILURE: {e}")
-        sys.exit(1)

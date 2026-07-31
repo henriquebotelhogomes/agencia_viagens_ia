@@ -6,13 +6,13 @@ from src.config import Settings, get_settings
 
 def test_settings_load_from_env(mock_settings):
     """Testa se as configurações são carregadas corretamente."""
-    assert mock_settings.groq_api_key == "mock_groq_key"
-    assert mock_settings.serper_api_key == "mock_serper_key"
+    assert mock_settings.opencode_api_key == "mock_opencode_key"
+    assert mock_settings.tavily_api_key == "mock_tavily_key"
 
 
 def test_secrets_are_not_exposed_in_repr(mock_settings):
     """Garante que segredos não vazam em repr/log (PRD §8.2)."""
-    assert "mock_groq_key" not in repr(mock_settings)
+    assert "mock_tavily_key" not in repr(mock_settings)
     assert "mock_opencode_key" not in repr(mock_settings)
 
 
@@ -33,9 +33,6 @@ def test_settings_default_empty_values(mocker):
     mocker.patch.dict(os.environ, {}, clear=True)
     # Passar _env_file=None para evitar que ele leia o arquivo .env real do projeto
     s = Settings(_env_file=None)
-    assert s.groq_api_key == ""
-    assert s.serper_api_key == ""
-    assert s.google_api_key == ""
     assert s.opencode_api_key == ""
     assert s.tavily_api_key == ""
 

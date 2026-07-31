@@ -26,7 +26,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # README.md é exigido pelo hatchling (metadado `readme` do pyproject)
 COPY README.md ./
 COPY src/ src/
-COPY app.py ./
 # Migrations do banco (PRD D8) — necessárias para `alembic upgrade head`
 COPY alembic.ini ./
 COPY alembic/ alembic/
@@ -79,9 +78,8 @@ RUN mkdir -p /app/.local/share /app/.cache /app/logs \
 
 USER app
 
-EXPOSE 8501
-
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Sem CMD: `runtime` é a base comum — cada estágio de deploy (web/worker/
+# release) e o docker-compose definem o seu próprio comando.
 
 ############################################
 # Estágios de deploy (ADR-0015)

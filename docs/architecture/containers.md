@@ -1,47 +1,20 @@
 # C4 nível 2 — Contêineres
 
-## Estado atual (Fase 0 concluída)
+## Estado atual (Fases 1 e 2 em produção)
 
 ```mermaid
 graph TB
     U["👤 Viajante"]
 
-    subgraph proc["Processo Python único"]
-        ST["<b>Streamlit</b><br/><i>app.py</i><br/>UI + orquestração no request"]
-        CORE["<b>Núcleo de domínio</b><br/><i>src/</i><br/>CrewAI + serviços"]
-        ST --> CORE
-    end
-
-    RD[("<b>Redis</b><br/><i>opcional</i><br/>cache de roteiros<br/>e geocoding")]
-    EXT["Serviços externos<br/><i>LLM · Tavily · Geoapify<br/>Frankfurter · Langfuse</i>"]
-
-    U -->|HTTPS| ST
-    CORE --> RD
-    CORE --> EXT
-
-    style ST fill:#ff7043,color:#fff
-    style CORE fill:#3f51b5,color:#fff
-```
-
-**Limitação conhecida**: a orquestração roda **dentro do request** do Streamlit
-(50-90s de espera bloqueante), e os roteiros só existem em cache efêmero. É
-exatamente o que a Fase 1 resolve.
-
-## Alvo (Fase 1 + Fase 2)
-
-```mermaid
-graph TB
-    U["👤 Viajante"]
-
-    subgraph render["Render"]
-        FE["<b>Next.js 15</b><br/><i>web service</i><br/>UI + BFF"]
-        API["<b>FastAPI</b><br/><i>web service</i><br/>REST + SSE + rate limit"]
-        WK["<b>Worker Arq</b><br/><i>background</i><br/>orquestração CrewAI"]
+    subgraph heroku["Heroku"]
+        FE["<b>Next.js 16</b><br/><i>voyager-web</i><br/>UI + mapa + FinOps"]
+        API["<b>FastAPI</b><br/><i>voyager-ia web</i><br/>REST + SSE + rate limit"]
+        WK["<b>Worker SAQ</b><br/><i>voyager-ia worker</i><br/>orquestração CrewAI"]
         PG[("<b>PostgreSQL</b><br/>Execution · Itinerary<br/>UsageRecord")]
         RD[("<b>Redis</b><br/>fila · cache<br/>pub/sub · rate limit")]
     end
 
-    EXT["Serviços externos"]
+    EXT["Serviços externos<br/><i>LLM · Tavily · Geoapify<br/>Frankfurter · Langfuse</i>"]
     OTEL["OpenTelemetry<br/>+ Langfuse"]
 
     U -->|HTTPS| FE
@@ -66,13 +39,20 @@ graph TB
 
 | Contêiner | Tecnologia | Responsabilidade | Estado |
 | --------- | ---------- | ---------------- | ------ |
-| **Streamlit** | Streamlit | UI atual (playground) | ✅ ativo |
-| **Núcleo de domínio** | Python 3.12, CrewAI, litellm | Agentes, tarefas, serviços | ✅ ativo |
-| **Redis** | Render Key Value | Cache; futuro: fila, pub/sub, rate limit | ✅ opcional |
-| **FastAPI** | FastAPI, Pydantic v2 | Contratos REST/OpenAPI, SSE, rate limit | ⏳ Fase 1 |
-| **Worker** | Arq | Execução assíncrona da crew | ⏳ Fase 1 |
-| **PostgreSQL** | Render Postgres, SQLAlchemy 2.0 async | Persistência de execuções e roteiros | ⏳ Fase 1 |
-| **Next.js** | Next.js 15, TypeScript, Tailwind | UI de produto, streaming, mapa | ⏳ Fase 2 |
+| **Next.js** | Next.js 16, TypeScript, Tailwind 4 | UI de produto, streaming, mapa, FinOps | ✅ produção |
+| **FastAPI** | FastAPI, Pydantic v2 | Contratos REST/OpenAPI, SSE, rate limit | ✅ produção |
+| **Worker** | SAQ | Execução assíncrona da crew | ✅ produção |
+| **Núcleo de domínio** | Python 3.12, CrewAI, litellm | Agentes, tarefas, serviços | ✅ produção |
+| **PostgreSQL** | Heroku Postgres, SQLAlchemy 2.0 async | Persistência de execuções e roteiros | ✅ produção |
+| **Redis** | Heroku Key-Value Store | Fila, cache, pub/sub, rate limit | ✅ produção |
+
+## Origem (aposentada)
+
+O projeto nasceu como um **monólito Streamlit** (`app.py`): UI e orquestração
+CrewAI no mesmo processo, com o roteiro gerado **dentro do request** (50-90s de
+espera bloqueante) e persistência apenas em cache efêmero. A Fase 1 extraiu a
+API + worker; a Fase 2 entregou o frontend Next.js; o playground Streamlit foi
+então removido do repositório (ADR-0005).
 
 ## Por que essa separação
 
@@ -83,5 +63,5 @@ graph TB
 | Redis como pub/sub | O worker publica progresso; a API faz relay para o cliente sem acoplamento direto |
 | PostgreSQL além do Redis | Roteiro é ativo do usuário, não cache — precisa de durabilidade e histórico |
 
-Ver [ADR-0006](../adr/0006-backend.md), [ADR-0007](../adr/0007-fila-worker.md) e
+Ver [ADR-0006](../adr/0006-backend.md), [ADR-0014](../adr/0014-fila-saq.md) e
 [ADR-0008](../adr/0008-persistencia.md) para os trade-offs completos.

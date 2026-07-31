@@ -26,9 +26,6 @@ _SECRET_FIELDS = (
     "LANGFUSE_PUBLIC_KEY",
     "LANGFUSE_SECRET_KEY",
     "OTEL_EXPORTER_OTLP_HEADERS",
-    "GROQ_API_KEY",
-    "SERPER_API_KEY",
-    "GOOGLE_API_KEY",
 )
 
 
@@ -110,13 +107,6 @@ class Settings(BaseSettings):
     OTEL_SERVICE_NAME: str = "voyager-api"
 
     # ------------------------------------------------------------------
-    # LEGADO — em uso pelo playground Streamlit até concluir a Fase 0
-    # ------------------------------------------------------------------
-    GROQ_API_KEY: SecretStr = SecretStr("")
-    SERPER_API_KEY: SecretStr = SecretStr("")
-    GOOGLE_API_KEY: SecretStr = SecretStr("")
-
-    # ------------------------------------------------------------------
     # Preços de referência (USD por 1M tokens) para o comparativo FinOps
     # ------------------------------------------------------------------
     price_gpt4o_input: float = 5.0
@@ -181,18 +171,6 @@ class Settings(BaseSettings):
     @property
     def langfuse_secret_key(self) -> str:
         return self.LANGFUSE_SECRET_KEY.get_secret_value()
-
-    @property
-    def groq_api_key(self) -> str:
-        return self.GROQ_API_KEY.get_secret_value()
-
-    @property
-    def serper_api_key(self) -> str:
-        return self.SERPER_API_KEY.get_secret_value()
-
-    @property
-    def google_api_key(self) -> str:
-        return self.GOOGLE_API_KEY.get_secret_value()
 
     # ------------------------------------------------------------------
     # Flags derivadas — habilitam degradação graciosa por serviço

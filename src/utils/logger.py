@@ -2,12 +2,7 @@
 
 12-factor: em produção, logs são um **stream JSON em stdout** (coletado pelo
 agregador da plataforma) — nunca arquivos locais. Em desenvolvimento, saída
-colorida no terminal + arquivo rotacionado por conveniência (botão de download
-do playground Streamlit).
-
-Nota: a adoção de ``structlog`` acontece na Fase 1 (API/worker); aqui o loguru
-com ``serialize=True`` cumpre o requisito de JSON estruturado sem quebrar os
-sinks dinâmicos usados pelo Streamlit.
+colorida no terminal + arquivo rotacionado por conveniência.
 """
 
 import sys
@@ -76,31 +71,3 @@ def setup_logger(settings: Settings | None = None) -> Any:
         )
 
     return logger
-
-
-class StreamlitSink:
-    """
-    Sink customizado para integrar o Loguru com o Streamlit.
-    Ele atualiza um placeholder ou o session_state em tempo real.
-    """
-
-    def __init__(self, placeholder: Any) -> None:
-        self.placeholder = placeholder
-        self.logs: list[str] = []
-
-    def write(self, message: str) -> None:
-        # O Loguru envia a mensagem já formatada
-        self.logs.append(message)
-        # Mantém apenas os últimos 5000 caracteres
-        # para não estourar a memória do browser
-        log_text = "".join(self.logs)[-5000:]
-        self.placeholder.code(log_text, language="text")
-
-
-def add_streamlit_sink(placeholder: Any) -> int:
-    """
-    Adiciona um sink dinâmico para o Streamlit.
-    Útil para exibir o raciocínio dos agentes na UI.
-    """
-    sink = StreamlitSink(placeholder)
-    return logger.add(sink.write, format="{message}", level="INFO")

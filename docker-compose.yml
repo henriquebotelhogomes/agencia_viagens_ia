@@ -98,33 +98,6 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # Playground Streamlit — aposentado como produto (ADR-0005); mantido sob
-  # profile para inspecionar prompts/agentes durante a transição.
-  streamlit:
-    profiles:
-      - playground
-    build:
-      context: .
-      target: runtime
-    ports:
-      - "8501:8501"
-    env_file:
-      - .env
-    environment:
-      - PYTHONUNBUFFERED=1
-      - PYTHONDONTWRITEBYTECODE=1
-      - APP_ENV=local
-      - REDIS_URL=redis://redis:6379/0
-    depends_on:
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   tests:
     profiles:
       - test

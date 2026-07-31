@@ -16,10 +16,6 @@ _SENSITIVE_ENV_VARS = (
     "LANGFUSE_SECRET_KEY",
     "OTEL_EXPORTER_OTLP_ENDPOINT",
     "OTEL_EXPORTER_OTLP_HEADERS",
-    "GROQ_API_KEY",
-    "GOOGLE_API_KEY",
-    "GEMINI_API_KEY",
-    "SERPER_API_KEY",
     "REDIS_URL",
     "DATABASE_URL",
 )
@@ -54,10 +50,6 @@ def mock_settings() -> Settings:
         GEOAPIFY_API_KEY="mock_geoapify_key",
         LANGFUSE_PUBLIC_KEY="mock_langfuse_public_key",
         LANGFUSE_SECRET_KEY="mock_langfuse_secret_key",
-        # Legado (playground Streamlit)
-        GROQ_API_KEY="mock_groq_key",
-        SERPER_API_KEY="mock_serper_key",
-        GOOGLE_API_KEY="mock_google_key",
     )
 
 

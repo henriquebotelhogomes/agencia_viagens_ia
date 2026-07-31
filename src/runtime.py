@@ -6,8 +6,8 @@ para variáveis de ambiente exigidas por SDKs de terceiros e supressão de um
 Redis inacessível.
 
 Regra: nenhum módulo de domínio deve mutar estado global no import. Os
-entrypoints (Streamlit, futura API/worker) chamam ``configure_llm_runtime()``
-uma única vez, no início da execução.
+entrypoints (API, worker) chamam ``configure_llm_runtime()`` uma única vez,
+no início da execução.
 """
 
 import os
@@ -64,17 +64,13 @@ def _purge_unreachable_redis(settings: Settings) -> None:
 def _export_provider_env(settings: Settings) -> None:
     """Exporta chaves para as variáveis de ambiente esperadas pelos SDKs.
 
-    Alguns SDKs (google-generativeai, litellm) leem apenas do ambiente. A
+    Alguns SDKs (litellm e integrações) leem apenas do ambiente. A
     exportação é feita aqui, de forma explícita e sem sobrescrever valores que
     já existam no ambiente.
     """
     provider_keys = {
-        "GOOGLE_API_KEY": settings.google_api_key,
-        "GEMINI_API_KEY": settings.google_api_key,
-        "GROQ_API_KEY": settings.groq_api_key,
         "OPENROUTER_API_KEY": settings.openrouter_api_key,
         "TAVILY_API_KEY": settings.tavily_api_key,
-        "SERPER_API_KEY": settings.serper_api_key,
         # Callback "langfuse" do litellm lê a configuração do ambiente (PRD D12)
         "LANGFUSE_PUBLIC_KEY": settings.langfuse_public_key,
         "LANGFUSE_SECRET_KEY": settings.langfuse_secret_key,

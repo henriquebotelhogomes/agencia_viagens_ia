@@ -1,7 +1,7 @@
 [project]
 name = "agencia-viagens-ia"
 version = "1.2.0"
-description = "Agência de Viagens Multiagentes com CrewAI e Streamlit"
+description = "Agência de Viagens Multiagentes com CrewAI — API FastAPI + worker + frontend Next.js"
 authors = [
     { name = "Henrique Botelho Gomes", email = "" }
 ]
@@ -13,18 +13,12 @@ dependencies = [
     # são conscientes, nunca silenciosos. Versões exatas ficam no uv.lock.
     "crewai>=1.12,<2.0",
     "crewai-tools>=1.12,<2.0",
-    "langchain-groq>=1.1,<2.0",
-    "langchain-google-genai>=4.2,<5.0",
     "requests>=2.32,<3.0",
     "pydantic>=2.11,<3.0",
-    "streamlit>=1.55,<2.0",
     "python-dotenv>=1.1,<2.0",
     "litellm>=1.82,<2.0",
-    "folium>=0.20,<1.0",
-    "streamlit-folium>=0.27,<1.0",
     "geopy>=2.4,<3.0",
     "pydantic-settings>=2.10,<3.0",
-    "google-generativeai>=0.8.6,<0.9",
     "loguru>=0.7,<1.0",
     "redis>=7.4,<8.0",
     "langfuse>=2.59,<3.0",

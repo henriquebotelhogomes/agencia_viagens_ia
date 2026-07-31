@@ -35,8 +35,10 @@ Em vez de uma única chamada longa para um modelo de linguagem, utilizei o **Cre
 
 ```mermaid
 graph TD
-    User((Usuário)) --> Streamlit[Frontend Streamlit]
-    Streamlit --> Crew[CrewAI Orchestrator]
+    User((Usuário)) --> FE[Frontend Next.js]
+    FE -->|REST + SSE| API[API FastAPI]
+    API -->|fila| WK[Worker SAQ]
+    WK --> Crew[CrewAI Orchestrator]
 
     subgraph Agents
         A1[🕵️ Guia Local]
@@ -130,16 +132,13 @@ O [guia de setup](docs/guides/setup.md) tem os links de cada serviço e a soluç
     O script testa cada integração contra a API real — sem exibir segredos.
 
 3.  **Rode com um comando:**
-    Se tiver o `uv` instalado:
+    Sobe Postgres, Redis, API, worker e o frontend Next.js:
     ```bash
-    uv run streamlit run app.py
-    ```
-    Ou via Docker:
-    ```bash
-    docker compose up app
+    docker compose up --build
     ```
 
-A aplicação estará disponível em seu navegador no endereço: **[http://localhost:8501](http://localhost:8501)**
+A aplicação estará disponível em **[http://localhost:3000](http://localhost:3000)**
+(API em [http://localhost:8000/docs](http://localhost:8000/docs)).
 
 ### 3. Documentação local
 

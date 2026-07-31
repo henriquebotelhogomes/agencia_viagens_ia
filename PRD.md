@@ -3,7 +3,7 @@
 > **Documento de Requisitos de Produto (PRD)** — consolida a revisão estratégica do
 > projeto, as decisões tomadas e o plano de modernização da arquitetura.
 >
-> **Versão:** 1.23 · **Status:** ✅ Fases 0, 1 e 2 concluídas · ✨ [Demo](https://voyager-web-b2607fcece65.herokuapp.com) · 🌐 [API](https://voyager-ia-d97e5ffe11f1.herokuapp.com/health) · 📚 [Documentação](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) · **Complementa:** [`specs/`](./specs/README.md)
+> **Versão:** 1.24 · **Status:** ✅ Fases 0, 1 e 2 concluídas · ✨ [Demo](https://voyager-web-b2607fcece65.herokuapp.com) · 🌐 [API](https://voyager-ia-d97e5ffe11f1.herokuapp.com/health) · 📚 [Documentação](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) · **Complementa:** [`specs/`](./specs/README.md)
 
 ***
 
@@ -237,8 +237,12 @@ Briefing → POST /v1/executions (202) → SSE de progresso dos agentes
 
 ### 4.2 Streamlit
 
-O `app.py` deixa de ser produto e vira **playground interno** (execução local apenas),
-até ser removido quando o frontend Next.js cobrir 100% do fluxo.
+✅ **Removido do repositório** ao final da Fase 2: o `app.py` virou playground
+interno durante a transição e foi aposentado quando o frontend Next.js passou a
+cobrir 100% do fluxo em produção — junto com as dependências (`streamlit`,
+`folium`, `streamlit-folium`, `langchain-groq`, `langchain-google-genai`,
+`google-generativeai`) e as chaves legadas (`GROQ_API_KEY`, `GOOGLE_API_KEY`,
+`SERPER_API_KEY`).
 
 ***
 
@@ -528,10 +532,11 @@ extração da API (Fase 0). O status é controlado no checklist da §15.
 * ✅ i18n de **conteúdo** (roteiro + moeda) entregue; interface **somente em
   PT-BR por decisão de produto** ([ADR-0016](docs/adr/0016-i18n.md)).
 
-* Pendente: aposentadoria formal do Streamlit (remoção do playground).
+* Pendente: apenas o export Markdown do roteiro (FR-06) — único item
+  remanescente do checklist da fase.
 
 * **DoD:** ✅ demo pública no ar; ✅ Lighthouse > 90 (todas as categorias);
-  Streamlit aposentado (último passo).
+  ✅ Streamlit aposentado.
 
 ### Fase 3 — Excelência operacional (contínuo)
 
@@ -609,6 +614,7 @@ extração da API (Fase 0). O status é controlado no checklist da §15.
 | 1.21   | **Fase 2 (frontend) concluída em dev**: Next.js 16 + React 19, design system próprio, briefing validado, execução ao vivo via SSE, roteiro + mapa MapLibre sincronizado, painel FinOps (novo endpoint `/v1/finops`). Bug real de produto corrigido (geocoding sem contexto do destino punha pinos no país errado). i18n de conteúdo entregue, interface adiada com decisão registrada (ADR-0016). Backend 182 testes; frontend 67 unit + 16 E2E, cobertura 98% |
 | 1.22   | **Decisão de produto: interface somente em português** — ADR-0016 atualizado (i18n de interface deixa de ser pendência e vira não-meta), FR-10 e specs/09 §9 alinhados. Checklist da Fase 2 sincronizado com o entregue (falta: export MD, deploy do frontend, Lighthouse, aposentar Streamlit). Corrigido "Arq"→"SAQ" na tabela de arquitetura |
 | 1.23   | **✨ Frontend EM PRODUÇÃO** (`voyager-web` no Heroku, custo total inalterado em US$ 13/mês): fluxo completo validado pela URL pública (Rio→Buenos Aires em 185s, 8 pinos corretos no mapa, FinOps com dados reais, zero erros de CORS). **Lighthouse mobile: Perf 96-98 / A11y 100 / BP 100 / SEO 100** — a nota de A11y subiu de 93 para 100 corrigindo a estrutura dos `<dl>`. Dep morta `motion` removida. Lição de medição: rodar Lighthouse com a máquina ocupada (build Docker em paralelo) derrubou a nota de 96 para 36 — variância de ambiente, não do site |
+| 1.24   | **Streamlit aposentado** (último item do DoD da Fase 2): removidos `app.py`, o serviço do compose, o sink dedicado no logger, 6 dependências (`streamlit`, `folium`, `streamlit-folium`, `langchain-groq`, `langchain-google-genai`, `google-generativeai`) e as chaves legadas `GROQ/GOOGLE/SERPER_API_KEY` (débito da Fase 0 quitado). O estágio `runtime` do Dockerfile virou base sem CMD. C4 de contêineres redesenhado para o estado em produção |
 
 ***
 
@@ -751,8 +757,9 @@ Controle de status das tarefas. Legenda: `[ ]` pendente · `[~]` em andamento ·
 #### Débitos técnicos identificados durante a Fase 0
 
 * [ ] `geopy` pode ser removido quando o Nominatim deixar de ser fallback
-* [ ] Chaves legadas (`GROQ_API_KEY`, `GOOGLE_API_KEY`, `SERPER_API_KEY`) saíram do
-  código; remover de `config.py`/`.env` após aposentar o Streamlit
+* [x] Chaves legadas (`GROQ_API_KEY`, `GOOGLE_API_KEY`, `SERPER_API_KEY`) saíram do
+  código; **removidas de `config.py`/`.env.example` junto com a aposentadoria do
+  Streamlit** (Fase 2)
 * [ ] Contador de requests do Go (Q2) exige store (Redis) — implementar junto com o
   rate limiting da Fase 1
 
@@ -835,8 +842,9 @@ Controle de status das tarefas. Legenda: `[ ]` pendente · `[~]` em andamento ·
   segue US$ 13/mês); **Lighthouse medido em produção (mobile): Performance
   96-98, Acessibilidade 100, Boas Práticas 100, SEO 100** — DoD > 90 cumprido
 
-* [ ] Streamlit aposentado (fora do produto; segue como playground em profile
-  do docker-compose — remoção formal é o último passo da fase)
+* [x] Streamlit aposentado: `app.py`, serviço do compose, dependências
+  (`streamlit`, `folium`, `streamlit-folium` + `langchain-groq`,
+  `langchain-google-genai`, `google-generativeai`) e chaves legadas removidos
 
 ### 15.4 Fase 3 — Excelência operacional
 
