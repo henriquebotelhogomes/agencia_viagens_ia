@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeft, MapPin, Timer } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Download, MapPin, Timer } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import Markdown from "react-markdown";
@@ -10,10 +10,11 @@ import remarkGfm from "remark-gfm";
 import { AgentTimeline, StatusBadge } from "@/components/agent-timeline";
 import { CostPanel } from "@/components/cost-panel";
 import { ItineraryMap } from "@/components/itinerary-map";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, Skeleton } from "@/components/ui/card";
 import { api } from "@/lib/api/client";
 import { type ExecutionDetail, isTerminal } from "@/lib/api/types";
+import { downloadItineraryMarkdown } from "@/lib/export-markdown";
 import { useExecutionStream } from "@/lib/hooks/use-execution-stream";
 
 interface ExecutionViewProps {
@@ -84,6 +85,16 @@ export function ExecutionView({ executionId, initial }: ExecutionViewProps) {
             </span>
           ) : null}
           <StatusBadge status={status} />
+          {execution.itinerary_markdown ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => downloadItineraryMarkdown(execution)}
+            >
+              <Download aria-hidden />
+              Baixar roteiro (.md)
+            </Button>
+          ) : null}
         </div>
       </header>
 

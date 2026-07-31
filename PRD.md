@@ -3,7 +3,7 @@
 > **Documento de Requisitos de Produto (PRD)** — consolida a revisão estratégica do
 > projeto, as decisões tomadas e o plano de modernização da arquitetura.
 >
-> **Versão:** 1.24 · **Status:** ✅ Fases 0, 1 e 2 concluídas · ✨ [Demo](https://voyager-web-b2607fcece65.herokuapp.com) · 🌐 [API](https://voyager-ia-d97e5ffe11f1.herokuapp.com/health) · 📚 [Documentação](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) · **Complementa:** [`specs/`](./specs/README.md)
+> **Versão:** 1.25 · **Status:** ✅ Fases 0, 1 e 2 concluídas · ✨ [Demo](https://voyager-web-b2607fcece65.herokuapp.com) · 🌐 [API](https://voyager-ia-d97e5ffe11f1.herokuapp.com/health) · 📚 [Documentação](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) · **Complementa:** [`specs/`](./specs/README.md)
 
 ***
 
@@ -518,7 +518,7 @@ extração da API (Fase 0). O status é controlado no checklist da §15.
 
 * **DoD:** roteiro gerado ponta a ponta via API, com trace completo e custo real gravado.
 
-### Fase 2 — Frontend Next.js (concluída em dev)
+### Fase 2 — Frontend Next.js (concluída)
 
 * ✅ Briefing → streaming de agentes (SSE) → roteiro em Markdown → mapa MapLibre
   sincronizado → painel FinOps público.
@@ -526,14 +526,14 @@ extração da API (Fase 0). O status é controlado no checklist da §15.
 * ✅ Design system próprio (tokens terracota/stone, tema claro/escuro), sem
   lock-in de biblioteca de componentes.
 
-* ✅ Testes: Vitest (67, cobertura 98%) + Playwright (desktop e mobile); tudo no
+* ✅ Testes: Vitest (80, cobertura 98%) + Playwright (desktop e mobile); tudo no
   CI. Contrato tipado com Zod espelhando o Pydantic.
 
 * ✅ i18n de **conteúdo** (roteiro + moeda) entregue; interface **somente em
   PT-BR por decisão de produto** ([ADR-0016](docs/adr/0016-i18n.md)).
 
-* Pendente: apenas o export Markdown do roteiro (FR-06) — único item
-  remanescente do checklist da fase.
+* ✅ Export Markdown do roteiro (FR-06): download 100% no cliente (Blob), com
+  bloco de proveniência no cabeçalho — **fase 100% concluída**.
 
 * **DoD:** ✅ demo pública no ar; ✅ Lighthouse > 90 (todas as categorias);
   ✅ Streamlit aposentado.
@@ -615,6 +615,7 @@ extração da API (Fase 0). O status é controlado no checklist da §15.
 | 1.22   | **Decisão de produto: interface somente em português** — ADR-0016 atualizado (i18n de interface deixa de ser pendência e vira não-meta), FR-10 e specs/09 §9 alinhados. Checklist da Fase 2 sincronizado com o entregue (falta: export MD, deploy do frontend, Lighthouse, aposentar Streamlit). Corrigido "Arq"→"SAQ" na tabela de arquitetura |
 | 1.23   | **✨ Frontend EM PRODUÇÃO** (`voyager-web` no Heroku, custo total inalterado em US$ 13/mês): fluxo completo validado pela URL pública (Rio→Buenos Aires em 185s, 8 pinos corretos no mapa, FinOps com dados reais, zero erros de CORS). **Lighthouse mobile: Perf 96-98 / A11y 100 / BP 100 / SEO 100** — a nota de A11y subiu de 93 para 100 corrigindo a estrutura dos `<dl>`. Dep morta `motion` removida. Lição de medição: rodar Lighthouse com a máquina ocupada (build Docker em paralelo) derrubou a nota de 96 para 36 — variância de ambiente, não do site |
 | 1.24   | **Streamlit aposentado** (último item do DoD da Fase 2): removidos `app.py`, o serviço do compose, o sink dedicado no logger, 6 dependências (`streamlit`, `folium`, `streamlit-folium`, `langchain-groq`, `langchain-google-genai`, `google-generativeai`) e as chaves legadas `GROQ/GOOGLE/SERPER_API_KEY` (débito da Fase 0 quitado). O estágio `runtime` do Dockerfile virou base sem CMD. C4 de contêineres redesenhado para o estado em produção |
+| 1.25   | **Export Markdown (FR-06) entregue — Fase 2 100% concluída**: botão "Baixar roteiro (.md)" na página da execução; documento montado 100% no cliente (Blob) com bloco de proveniência (marca, briefing, data) antes do roteiro na íntegra; nome de arquivo sanitizado com slug do destino. Nova suíte Playwright `generation.spec.ts` (fluxo completo briefing → roteiro → download real, opt-in `E2E_API=1` por exigir API no ar — pulada no CI). 80 testes de unidade, cobertura 98% |
 
 ***
 
@@ -827,7 +828,9 @@ Controle de status das tarefas. Legenda: `[ ]` pendente · `[~]` em andamento ·
   pontos — **bug real corrigido**: geocoding sem o destino como contexto punha
   pinos no país errado ("Time Out Market" → Nova York)
 
-* [ ] Export Markdown (FR-06)
+* [x] Export Markdown (FR-06) — botão "Baixar roteiro (.md)" na página da
+  execução; documento montado no cliente (Blob) com proveniência no cabeçalho
+  e nome de arquivo sanitizado (`roteiro-buenos-aires-3-dias.md`)
 
 * [x] Painel FinOps público (FR-07) — novo endpoint `GET /v1/finops` agregando
   custo, economia, cache hit ratio e série diária
@@ -835,8 +838,9 @@ Controle de status das tarefas. Legenda: `[ ]` pendente · `[~]` em andamento ·
 * [x] Conteúdo i18n (FR-10): roteiro no idioma e moeda do briefing; interface
   somente em PT-BR por decisão de produto (ADR-0016)
 
-* [x] Testes: Vitest 67 (cobertura 98%, gate 90%) + Playwright 8 cenários em
-  desktop e mobile; job de frontend no CI
+* [x] Testes: Vitest 80 (cobertura 98%, gate 90%) + Playwright 9 cenários em
+  desktop e mobile (geração completa com export em opt-in `E2E_API=1`, por
+  exigir API no ar); job de frontend no CI
 
 * [x] Deploy do frontend no Heroku (app `voyager-web`, dyno Eco — custo total
   segue US$ 13/mês); **Lighthouse medido em produção (mobile): Performance

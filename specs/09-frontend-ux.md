@@ -83,6 +83,10 @@
 - Ações: **exportar** (PDF/Markdown/.ics), **compartilhar** (link público), **refinar**.
 - **Feedback** 👍/👎 + motivo, inline por item e no roteiro.
 
+> **Entregue na Fase 2** ([FR-06](../PRD.md)): export **Markdown** — download
+> direto no cliente, com bloco de proveniência no cabeçalho. PDF/.ics,
+> compartilhar e refinar seguem no backlog (Q5).
+
 ### 5.5 Refinamento
 - Caixa de instrução ("mais barato", "menos caminhada") → gera **nova versão**.
 - **Comparação de versões** (diff visual) e histórico.

@@ -105,6 +105,14 @@ heroku config:set --app voyager-ia \
 
 `APP_ENV=production` tem dois efeitos: logs em JSON e `/docs` desabilitado.
 
+Sem o `CREWAI_TESTING=true` abaixo, o worker fica sujeito ao prompt interativo
+de tracing do CrewAI a cada cold start (ver
+[problemas conhecidos](#worker-lento-no-primeiro-job-apos-restart-crewai)):
+
+```bash
+heroku config:set CREWAI_TESTING=true --app voyager-ia
+```
+
 ### Telemetria (opcional)
 
 Para ativar os traces de infraestrutura ([OpenTelemetry](observability.md#traces-de-infraestrutura-opentelemetry)),
@@ -262,6 +270,20 @@ O manifest está em formato OCI. Use `oci-mediatypes=false` no `--output` do
 
 O Git Credential Manager abriu uma janela de autenticação aguardando interação.
 Use `scripts/deploy_heroku.ps1` — o Container Registry autentica por token.
+
+### Worker lento no primeiro job após restart (CrewAI)
+
+Sintoma: após `config:set` ou redeploy, o primeiro job fica ~3 min "na fila"
+antes de processar; os seguintes levam os ~70-90 s normais.
+
+Causa: o CrewAI >= 1.12 exibe um prompt interativo ("view execution traces?
+[y/N]", auto-timeout de 20 s) na **primeira execução de cada processo**, e o
+consentimento fica em `.crewai_user.json` — arquivo que se perde no filesystem
+efêmero do Heroku, então o prompt volta a cada cold start.
+
+Correção: `heroku config:set CREWAI_TESTING=true --app voyager-ia` (já presente
+no `docker-compose.yml` e no `.env.example`). O tracing de LLM não é afetado —
+segue no Langfuse (D12); só o fluxo interativo do CrewAI é pulado.
 
 ### `Error R10 (Boot timeout)`
 

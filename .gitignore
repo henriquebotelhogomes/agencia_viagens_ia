@@ -11,8 +11,10 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+# Ancorado na raiz: `lib/` sem barra ignorava também `frontend/src/lib/`
+# (artefatos de build Python são só no topo do repositório)
+/lib/
+/lib64/
 parts/
 sdist/
 var/
