@@ -3,7 +3,7 @@
 > **Documento de Requisitos de Produto (PRD)** — consolida a revisão estratégica do
 > projeto, as decisões tomadas e o plano de modernização da arquitetura.
 >
-> **Versão:** 1.21 · **Status:** ✅ Fases 0, 1 e 2(dev) · 🌐 [API em produção](https://voyager-ia-d97e5ffe11f1.herokuapp.com/health) · 📚 [Documentação](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) · **Complementa:** [`specs/`](./specs/README.md)
+> **Versão:** 1.22 · **Status:** ✅ Fases 0, 1 e 2(dev) · 🌐 [API em produção](https://voyager-ia-d97e5ffe11f1.herokuapp.com/health) · 📚 [Documentação](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) · **Complementa:** [`specs/`](./specs/README.md)
 
 ***
 
@@ -233,7 +233,7 @@ Briefing → POST /v1/executions (202) → SSE de progresso dos agentes
 | FR-07 | Painel FinOps com **custo real** por execução                              | Tokens e USD por chamada (via Langfuse/OpenRouter), não heurística                   |
 | FR-08 | Cache exato de roteiros                                                    | Hash do briefing → Redis (mecanismo atual, atrás da API)                             |
 | FR-09 | Rate limiting por IP                                                       | N execuções/hora/IP (Redis); erro RFC 9457 quando excedido                           |
-| FR-10 | i18n pt-BR/EN e moeda parametrizada                                        | Prompt e UI respeitam idioma/moeda do briefing (remove "R$" hardcoded de `tasks.py`) |
+| FR-10 | Conteúdo i18n e moeda parametrizada                                       | Roteiro gerado no idioma do briefing (pt-BR/en-US/es-ES) e custos na moeda escolhida; interface somente em PT-BR (ADR-0016) |
 
 ### 4.2 Streamlit
 
@@ -283,9 +283,9 @@ graph LR
 
 | Componente        | Tecnologia                                                                                      | Responsabilidade                                         |
 | ----------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| Frontend          | Next.js 15, TypeScript, Tailwind 4, shadcn/ui, TanStack Query, MapLibre, next-intl              | UX, briefing, streaming, mapa, i18n                      |
+| Frontend          | Next.js 16, TypeScript, Tailwind 4, TanStack Query, MapLibre, Zod                               | UX, briefing, streaming, mapa, contrato tipado           |
 | API               | FastAPI, Pydantic v2, SQLAlchemy 2.0 async, Alembic                                             | Contratos REST/OpenAPI, validação, SSE relay, rate limit |
-| Worker            | Arq + CrewAI + litellm (OpenCode Go → OpenRouter)                                               | Orquestração dos agentes, publicação de progresso        |
+| Worker            | SAQ + CrewAI + litellm (OpenCode Go → OpenRouter)                                               | Orquestração dos agentes, publicação de progresso        |
 | Núcleo de domínio | `src/` refatorado (agents, tasks, crew\_builder, services)                                      | Lógica de negócio reaproveitada, sem efeitos colaterais  |
 | Dados             | PostgreSQL (`Execution`, `Itinerary`, `UsageRecord`) + Redis (cache, fila, pub/sub, rate limit) | Persistência e coordenação                               |
 
@@ -525,8 +525,8 @@ extração da API (Fase 0). O status é controlado no checklist da §15.
 * ✅ Testes: Vitest (67, cobertura 98%) + Playwright (desktop e mobile); tudo no
   CI. Contrato tipado com Zod espelhando o Pydantic.
 
-* ✅ i18n de **conteúdo** (roteiro + moeda) entregue; interface em PT-BR com o
-  caminho registrado ([ADR-0016](docs/adr/0016-i18n.md)).
+* ✅ i18n de **conteúdo** (roteiro + moeda) entregue; interface **somente em
+  PT-BR por decisão de produto** ([ADR-0016](docs/adr/0016-i18n.md)).
 
 * Pendente: **deploy** do frontend (aguarda decisão de plataforma — Vercel vs
   Heroku); Lighthouse > 90 medido em produção; aposentadoria formal do Streamlit.
@@ -607,6 +607,7 @@ extração da API (Fase 0). O status é controlado no checklist da §15.
 | 1.19   | **4º bug de contrato + teste determinístico**: corpo JSON malformado produzia **400 não documentado** (o Starlette responde antes do Pydantic); a OpenAPI agora documenta 400 em toda operação com `requestBody`. O teste passou a usar `derandomize=True` com 60 exemplos/rota — sem isso a falha aparecia só às vezes, o que tornaria o CI intermitente. Estabilidade verificada em 3 execuções completas |
 | 1.20   | **🌐 Fase 1 EM PRODUÇÃO no Heroku**: geração completa validada (93s, 18.711 tokens, 8 locais, EUR), migrations via release phase, dynos Eco dentro do crédito. Três obstáculos reais superados: `git push heroku` travado pelo Git Credential Manager (→ Container Registry), `error from registry: unsupported` do containerd image store (→ `oci-mediatypes=false`) e **CrewAI lendo `REDIS_URL` no import** e conectando sem TLS (→ `src/bootstrap.py`). 168 testes |
 | 1.21   | **Fase 2 (frontend) concluída em dev**: Next.js 16 + React 19, design system próprio, briefing validado, execução ao vivo via SSE, roteiro + mapa MapLibre sincronizado, painel FinOps (novo endpoint `/v1/finops`). Bug real de produto corrigido (geocoding sem contexto do destino punha pinos no país errado). i18n de conteúdo entregue, interface adiada com decisão registrada (ADR-0016). Backend 182 testes; frontend 67 unit + 16 E2E, cobertura 98% |
+| 1.22   | **Decisão de produto: interface somente em português** — ADR-0016 atualizado (i18n de interface deixa de ser pendência e vira não-meta), FR-10 e specs/09 §9 alinhados. Checklist da Fase 2 sincronizado com o entregue (falta: export MD, deploy do frontend, Lighthouse, aposentar Streamlit). Corrigido "Arq"→"SAQ" na tabela de arquitetura |
 
 ***
 
@@ -806,25 +807,34 @@ Controle de status das tarefas. Legenda: `[ ]` pendente · `[~]` em andamento ·
 
 ### 15.3 Fase 2 — Frontend Next.js
 
-* [ ] Projeto Next.js 15 + TypeScript + Tailwind + shadcn/ui
+* [x] Projeto Next.js 16 + React 19 + TypeScript + Tailwind 4 (design system
+  próprio com tokens — sem dependência de shadcn/ui)
 
-* [ ] Formulário de briefing com validação Zod (FR-01)
+* [x] Formulário de briefing com validação Zod (FR-01) + chave de idempotência
 
-* [ ] Streaming dos agentes na UI via SSE (FR-03)
+* [x] Streaming dos agentes na UI via SSE (FR-03) — timeline com estados
+  derivados do último evento (resiliente a reconexão)
 
-* [ ] Mapa MapLibre consumindo GeoJSON (FR-05)
+* [x] Mapa MapLibre consumindo GeoJSON (FR-05), sincronizado com a lista de
+  pontos — **bug real corrigido**: geocoding sem o destino como contexto punha
+  pinos no país errado ("Time Out Market" → Nova York)
 
 * [ ] Export Markdown (FR-06)
 
-* [ ] Painel FinOps público (FR-07)
+* [x] Painel FinOps público (FR-07) — novo endpoint `GET /v1/finops` agregando
+  custo, economia, cache hit ratio e série diária
 
-* [ ] i18n pt-BR/EN com next-intl (FR-10)
+* [x] Conteúdo i18n (FR-10): roteiro no idioma e moeda do briefing; interface
+  somente em PT-BR por decisão de produto (ADR-0016)
 
-* [ ] Testes E2E com Playwright
+* [x] Testes: Vitest 67 (cobertura 98%, gate 90%) + Playwright 8 cenários em
+  desktop e mobile; job de frontend no CI
 
-* [ ] Deploy do frontend no Heroku; Lighthouse > 90
+* [ ] Deploy do frontend no Heroku (segundo app, dyno Eco — custo total segue
+  US$ 13/mês); Lighthouse > 90 medido em produção
 
-* [ ] Streamlit aposentado
+* [ ] Streamlit aposentado (fora do produto; segue como playground em profile
+  do docker-compose até o frontend estar em produção)
 
 ### 15.4 Fase 3 — Excelência operacional
 

@@ -119,8 +119,14 @@
 
 ## 9. Internacionalização e moeda
 
-- `next-intl` para PT-BR/EN; formatação de número/data/moeda por locale.
-- Moeda de custos conforme preferência do workspace.
+> **Decisão revisada** ([ADR-0016](../docs/adr/0016-i18n.md)): a interface é
+> **somente em português**, por decisão de produto. A internacionalização vale
+> para o **conteúdo**: o roteiro é gerado no idioma escolhido (pt-BR/en-US/es-ES)
+> e os custos na moeda do briefing (BRL/USD/EUR/GBP). O `next-intl` previsto
+> abaixo não foi adotado.
+
+- ~~`next-intl` para PT-BR/EN; formatação de número/data/moeda por locale.~~
+- Moeda de custos conforme preferência do briefing.
 
 ## 10. Qualidade e DX do frontend
 
