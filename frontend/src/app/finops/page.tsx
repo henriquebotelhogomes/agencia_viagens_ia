@@ -112,28 +112,31 @@ function Dashboard({ summary }: { summary: FinOpsSummary }) {
 
   return (
     <>
-      <dl className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {metrics.map(({ icon: Icon, label, value, detail, highlight }) => (
           <Card key={label}>
+            {/* Um <dl> por cartão: dt/dd precisam ser agrupados diretamente */}
             <CardContent className="pt-5">
-              <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Icon className="size-3.5" aria-hidden />
-                {label}
-              </dt>
-              <dd className="mt-2">
-                <span
-                  className={`font-display text-3xl ${highlight ? "text-primary" : ""}`}
-                >
-                  {value}
-                </span>
-                <span className="mt-1 block text-xs text-muted-foreground">
-                  {detail}
-                </span>
-              </dd>
+              <dl>
+                <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Icon className="size-3.5" aria-hidden />
+                  {label}
+                </dt>
+                <dd className="mt-2">
+                  <span
+                    className={`font-display text-3xl ${highlight ? "text-primary" : ""}`}
+                  >
+                    {value}
+                  </span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {detail}
+                  </span>
+                </dd>
+              </dl>
             </CardContent>
           </Card>
         ))}
-      </dl>
+      </div>
 
       {summary.daily.length > 1 ? (
         <Card className="mt-8">

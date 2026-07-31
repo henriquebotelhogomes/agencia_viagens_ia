@@ -8,7 +8,8 @@
 [![Types: mypy strict](https://img.shields.io/badge/types-mypy%20strict-blue.svg)](https://mypy-lang.org/)
 [![Cloud: Heroku](https://img.shields.io/badge/cloud-heroku-430098.svg)](https://heroku.com/)
 
-> **API em produção:** [voyager-ia-d97e5ffe11f1.herokuapp.com/health](https://voyager-ia-d97e5ffe11f1.herokuapp.com/health)
+> **✨ Demo ao vivo:** [voyager-web-b2607fcece65.herokuapp.com](https://voyager-web-b2607fcece65.herokuapp.com)
+> · **API:** [voyager-ia-d97e5ffe11f1.herokuapp.com/health](https://voyager-ia-d97e5ffe11f1.herokuapp.com/health)
 > · **Documentação técnica:** [henriquebotelhogomes.github.io/agencia_viagens_ia](https://henriquebotelhogomes.github.io/agencia_viagens_ia/)
 
 ---

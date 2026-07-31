@@ -45,17 +45,20 @@ export default function HomePage() {
 
           <dl className="flex flex-col gap-6 border-t border-border pt-8">
             {PILLARS.map(({ icon: Icon, title, body }) => (
-              <div key={title} className="flex gap-4">
-                <span
-                  className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md bg-primary-subtle text-primary"
-                  aria-hidden
-                >
-                  <Icon className="size-4.5" />
-                </span>
-                <div>
-                  <dt className="font-medium">{title}</dt>
-                  <dd className="mt-1 text-sm text-muted-foreground">{body}</dd>
-                </div>
+              // dt/dd como filhos diretos do agrupador: exigência do axe para <dl>
+              <div key={title}>
+                <dt className="flex items-center gap-4 font-medium">
+                  <span
+                    className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary-subtle text-primary"
+                    aria-hidden
+                  >
+                    <Icon className="size-4.5" />
+                  </span>
+                  {title}
+                </dt>
+                <dd className="mt-1 pl-13 text-sm text-muted-foreground">
+                  {body}
+                </dd>
               </div>
             ))}
           </dl>

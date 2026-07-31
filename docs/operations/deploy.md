@@ -163,6 +163,50 @@ curl https://voyager-ia-d97e5ffe11f1.herokuapp.com/health
 uv run python -m scripts.e2e_smoke --base-url https://voyager-ia-d97e5ffe11f1.herokuapp.com
 ```
 
+## 7. Frontend (app `voyager-web`)
+
+O frontend é um **segundo app** no Heroku (cada app tem um único processo
+`web`), no mesmo plano Eco — custo adicional zero.
+
+```powershell
+heroku create voyager-web --stack container
+
+# A URL da API entra no bundle em BUILD time (NEXT_PUBLIC_), nao em runtime
+cd frontend
+docker buildx build `
+  --build-arg NEXT_PUBLIC_API_URL=https://voyager-ia-d97e5ffe11f1.herokuapp.com `
+  --target runtime --provenance=false --sbom=false `
+  --output "type=registry,name=registry.heroku.com/voyager-web/web,oci-mediatypes=false,push=true" .
+
+heroku container:release web --app voyager-web
+heroku ps:scale web=1 --app voyager-web
+heroku ps:type web=eco --app voyager-web
+```
+
+**Não esqueça o CORS**: a API só aceita origens listadas.
+
+```bash
+heroku config:set "CORS_ALLOWED_ORIGINS=https://voyager-web-b2607fcece65.herokuapp.com,http://localhost:3000" --app voyager-ia
+```
+
+### Lighthouse em produção
+
+Medido em 2026-07-31 (mobile, média de 3 execuções): **Performance 96-98,
+Acessibilidade 100, Boas Práticas 100, SEO 100**.
+
+Duas armadilhas de medição descobertas na prática:
+
+1. **Acorde o dyno antes** — um Eco dormindo adiciona ~10 s de cold start e
+   destrói a nota de Performance.
+2. **Máquina ociosa** — o throttle de CPU do Lighthouse é relativo à máquina
+   que mede: rodar durante um build Docker derrubou a nota de 96 para 36.
+
+```powershell
+# Sem Chrome instalado, o Edge serve (é Chromium)
+$env:CHROME_PATH = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+npx lighthouse https://voyager-web-b2607fcece65.herokuapp.com --chrome-flags="--headless=new"
+```
+
 Checklist de aceitação:
 
 - [ ] `/health` retorna `database` e `redis` como `ok`

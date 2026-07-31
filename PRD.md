@@ -3,7 +3,7 @@
 > **Documento de Requisitos de Produto (PRD)** — consolida a revisão estratégica do
 > projeto, as decisões tomadas e o plano de modernização da arquitetura.
 >
-> **Versão:** 1.22 · **Status:** ✅ Fases 0, 1 e 2(dev) · 🌐 [API em produção](https://voyager-ia-d97e5ffe11f1.herokuapp.com/health) · 📚 [Documentação](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) · **Complementa:** [`specs/`](./specs/README.md)
+> **Versão:** 1.23 · **Status:** ✅ Fases 0, 1 e 2 concluídas · ✨ [Demo](https://voyager-web-b2607fcece65.herokuapp.com) · 🌐 [API](https://voyager-ia-d97e5ffe11f1.herokuapp.com/health) · 📚 [Documentação](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) · **Complementa:** [`specs/`](./specs/README.md)
 
 ***
 
@@ -528,10 +528,10 @@ extração da API (Fase 0). O status é controlado no checklist da §15.
 * ✅ i18n de **conteúdo** (roteiro + moeda) entregue; interface **somente em
   PT-BR por decisão de produto** ([ADR-0016](docs/adr/0016-i18n.md)).
 
-* Pendente: **deploy** do frontend (aguarda decisão de plataforma — Vercel vs
-  Heroku); Lighthouse > 90 medido em produção; aposentadoria formal do Streamlit.
+* Pendente: aposentadoria formal do Streamlit (remoção do playground).
 
-* **DoD:** demo pública no ar; Lighthouse > 90; Streamlit aposentado.
+* **DoD:** ✅ demo pública no ar; ✅ Lighthouse > 90 (todas as categorias);
+  Streamlit aposentado (último passo).
 
 ### Fase 3 — Excelência operacional (contínuo)
 
@@ -608,6 +608,7 @@ extração da API (Fase 0). O status é controlado no checklist da §15.
 | 1.20   | **🌐 Fase 1 EM PRODUÇÃO no Heroku**: geração completa validada (93s, 18.711 tokens, 8 locais, EUR), migrations via release phase, dynos Eco dentro do crédito. Três obstáculos reais superados: `git push heroku` travado pelo Git Credential Manager (→ Container Registry), `error from registry: unsupported` do containerd image store (→ `oci-mediatypes=false`) e **CrewAI lendo `REDIS_URL` no import** e conectando sem TLS (→ `src/bootstrap.py`). 168 testes |
 | 1.21   | **Fase 2 (frontend) concluída em dev**: Next.js 16 + React 19, design system próprio, briefing validado, execução ao vivo via SSE, roteiro + mapa MapLibre sincronizado, painel FinOps (novo endpoint `/v1/finops`). Bug real de produto corrigido (geocoding sem contexto do destino punha pinos no país errado). i18n de conteúdo entregue, interface adiada com decisão registrada (ADR-0016). Backend 182 testes; frontend 67 unit + 16 E2E, cobertura 98% |
 | 1.22   | **Decisão de produto: interface somente em português** — ADR-0016 atualizado (i18n de interface deixa de ser pendência e vira não-meta), FR-10 e specs/09 §9 alinhados. Checklist da Fase 2 sincronizado com o entregue (falta: export MD, deploy do frontend, Lighthouse, aposentar Streamlit). Corrigido "Arq"→"SAQ" na tabela de arquitetura |
+| 1.23   | **✨ Frontend EM PRODUÇÃO** (`voyager-web` no Heroku, custo total inalterado em US$ 13/mês): fluxo completo validado pela URL pública (Rio→Buenos Aires em 185s, 8 pinos corretos no mapa, FinOps com dados reais, zero erros de CORS). **Lighthouse mobile: Perf 96-98 / A11y 100 / BP 100 / SEO 100** — a nota de A11y subiu de 93 para 100 corrigindo a estrutura dos `<dl>`. Dep morta `motion` removida. Lição de medição: rodar Lighthouse com a máquina ocupada (build Docker em paralelo) derrubou a nota de 96 para 36 — variância de ambiente, não do site |
 
 ***
 
@@ -830,11 +831,12 @@ Controle de status das tarefas. Legenda: `[ ]` pendente · `[~]` em andamento ·
 * [x] Testes: Vitest 67 (cobertura 98%, gate 90%) + Playwright 8 cenários em
   desktop e mobile; job de frontend no CI
 
-* [ ] Deploy do frontend no Heroku (segundo app, dyno Eco — custo total segue
-  US$ 13/mês); Lighthouse > 90 medido em produção
+* [x] Deploy do frontend no Heroku (app `voyager-web`, dyno Eco — custo total
+  segue US$ 13/mês); **Lighthouse medido em produção (mobile): Performance
+  96-98, Acessibilidade 100, Boas Práticas 100, SEO 100** — DoD > 90 cumprido
 
 * [ ] Streamlit aposentado (fora do produto; segue como playground em profile
-  do docker-compose até o frontend estar em produção)
+  do docker-compose — remoção formal é o último passo da fase)
 
 ### 15.4 Fase 3 — Excelência operacional
 
