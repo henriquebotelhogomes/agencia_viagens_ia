@@ -1,18 +1,28 @@
 """Configuração do worker SAQ (ADR-0014).
 
 Execução: `saq src.worker.settings.settings`
+
+!!! warning "A ordem dos imports neste módulo é significativa"
+    `isolate_redis_from_third_parties()` roda **antes** de importar
+    `src.worker.tasks`, que alcança o CrewAI. O CrewAI lê `REDIS_URL` numa
+    constante de módulo — depois do import, mudar o ambiente não tem efeito.
 """
 
-from typing import Any
+from src.bootstrap import isolate_redis_from_third_parties
 
-from loguru import logger
+isolate_redis_from_third_parties()
 
-from src.config import get_settings
-from src.runtime import configure_llm_runtime
-from src.services.queue_service import build_queue
-from src.telemetry import configure_telemetry
-from src.utils.logger import setup_logger
-from src.worker.tasks import generate_itinerary
+# Imports abaixo do bootstrap por necessidade, não por descuido (ver docstring).
+from typing import Any  # noqa: E402
+
+from loguru import logger  # noqa: E402
+
+from src.config import get_settings  # noqa: E402
+from src.runtime import configure_llm_runtime  # noqa: E402
+from src.services.queue_service import build_queue  # noqa: E402
+from src.telemetry import configure_telemetry  # noqa: E402
+from src.utils.logger import setup_logger  # noqa: E402
+from src.worker.tasks import generate_itinerary  # noqa: E402
 
 
 async def startup(ctx: dict[str, Any]) -> None:  # noqa: ARG001 - assinatura do SAQ

@@ -8,7 +8,8 @@
 [![Types: mypy strict](https://img.shields.io/badge/types-mypy%20strict-blue.svg)](https://mypy-lang.org/)
 [![Cloud: Heroku](https://img.shields.io/badge/cloud-heroku-430098.svg)](https://heroku.com/)
 
-> **Documentação técnica:** [henriquebotelhogomes.github.io/agencia_viagens_ia](https://henriquebotelhogomes.github.io/agencia_viagens_ia/)
+> **API em produção:** [voyager-ia-d97e5ffe11f1.herokuapp.com/health](https://voyager-ia-d97e5ffe11f1.herokuapp.com/health)
+> · **Documentação técnica:** [henriquebotelhogomes.github.io/agencia_viagens_ia](https://henriquebotelhogomes.github.io/agencia_viagens_ia/)
 
 ---
 
@@ -88,7 +89,7 @@ graph TD
 | **Ferramentas dos agentes** | Tavily (busca web), Geoapify (geocoding) |
 | **Backend & Cache** | Python 3.12, Redis, Pydantic v2 (Settings + SecretStr) |
 | **Frontend** | Streamlit (playground) — Next.js 15 planejado |
-| **DevOps** | Docker multi-stage non-root, GitHub Actions, Ruff, mypy strict, heroku.yml (IaC), uv |
+| **DevOps** | Docker multi-stage non-root, GitHub Actions, Ruff, mypy strict, deploy no Heroku (Container Registry), uv |
 | **Observabilidade** | Langfuse (tracing de LLM), Loguru (JSON em stdout), FinOps por tokens reais |
 | **Documentação** | MkDocs Material + mkdocstrings, ADRs versionados |
 

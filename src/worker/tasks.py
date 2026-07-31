@@ -122,7 +122,11 @@ async def _run_job(
             return ExecutionStatus.SUCCEEDED.value
 
         except Exception as e:
-            logger.error(f"Execução {execution_id} falhou: {e}")
+            # `exception=True` inclui o stack trace: sem ele, só se sabe *que*
+            # falhou, não *onde* — diagnosticar em produção fica impossível.
+            # `diagnose=False` (configurado no logger) mantém valores de
+            # variáveis fora do log, então nenhum segredo vaza.
+            logger.opt(exception=True).error(f"Execução {execution_id} falhou: {e}")
             execution.status = ExecutionStatus.FAILED
             execution.error_message = str(e)[:2000]
             execution.duration_seconds = round(time.perf_counter() - started, 2)

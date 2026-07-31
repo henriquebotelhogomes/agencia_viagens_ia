@@ -78,16 +78,37 @@ Ofertas de hospedagem ativas no pack, verificadas em 30/07/2026:
 
 ## Decisão
 
-**Heroku**, container stack, declarado em [`heroku.yml`](https://github.com/henriquebotelhogomes/agencia_viagens_ia/blob/master/heroku.yml).
+**Heroku**, container stack, publicado pelo **Container Registry** com
+[`scripts/deploy_heroku.ps1`](https://github.com/henriquebotelhogomes/agencia_viagens_ia/blob/master/scripts/deploy_heroku.ps1).
 
-Uma única imagem serve os três papéis (`web`, `worker` e `release`), porque sem
-cache de layers cada imagem adicional custaria um build completo.
+O Dockerfile ganhou três estágios finais (`web`, `worker`, `release`), todos
+herdando de `runtime`: compartilham camadas, então cada imagem extra custa
+apenas a camada do comando. A imagem `release` aplica as migrations — se falhar,
+o Heroku aborta o deploy e a versão anterior **permanece no ar**.
 
-O Blueprint do Render foi **removido** em vez de mantido como alternativa: uma
-configuração de deploy que ninguém executa apodrece silenciosamente. A
-portabilidade real está preservada onde importa — a aplicação continua sendo um
-container 12-Factor que lê tudo do ambiente, sem uma linha de código específica
-de provedor.
+### Por que não `git push heroku` com `heroku.yml`
+
+O caminho canónico foi tentado primeiro e **não funcionou** neste ambiente:
+
+- O Git Credential Manager do Windows abre uma janela de autenticação para
+  `git.heroku.com`. Em terminal não-interativo, o comando trava
+  indefinidamente — até um `git ls-remote` pendurou por 5 minutos.
+- O Heroku [não aceita mais](https://devcenter.heroku.com/articles/git#http-git-authentication)
+  usuário e senha no git; e o `heroku login` guarda credenciais no keychain do
+  Windows, inacessível ao git (não há `.netrc`).
+
+O `heroku.yml` foi **removido**: com o Container Registry ele não é lido, e
+configuração que ninguém executa apodrece silenciosamente. O script de deploy
+cumpre o mesmo papel de forma executável e verificável.
+
+O ganho colateral é real: o build passou a ser **local, com cache**. A primeira
+imagem leva ~170 s; as outras duas, 0,2 s. O container stack do Heroku não faz
+cache de layers, então cada build remoto seria completo.
+
+O Blueprint do Render foi removido pelo mesmo critério. A portabilidade real
+está preservada onde importa — a aplicação continua sendo um container
+12-Factor que lê tudo do ambiente, sem uma linha de código específica de
+provedor.
 
 ## Consequências
 
@@ -109,12 +130,12 @@ de provedor.
 
 Descobertos ao ler a documentação, antes do primeiro deploy:
 
-| Achado | Tratamento |
-| ------ | ---------- |
+| Aspecto | Como funciona |
+| ------- | ------------- |
 | Key-Value Store usa `rediss://` com **certificado self-signed**; `redis-py` recusa a conexão | [`src/services/redis_client.py`](../reference/services.md) centraliza a criação de clientes e desabilita apenas a verificação da cadeia, preservando a cifra |
 | `DATABASE_URL` chega como `postgres://`, que o SQLAlchemy async não aceita | Validator em `Settings` normaliza para `postgresql+asyncpg://` |
 | Postgres Essential-0 permite **20 conexões**; o padrão do projeto (5 + 10 overflow) daria 30 com dois dynos | `DB_POOL_SIZE=2` e `DB_MAX_OVERFLOW=3` no ambiente de produção |
-| `EXPOSE` é ignorado; o processo web precisa escutar em `$PORT` | Comando `run.web` usa `--port $PORT` |
+| `EXPOSE` é ignorado; o processo web precisa escutar em `$PORT` | Estágio `web` do Dockerfile usa `--port ${PORT:-8000}` na forma shell do CMD |
 | Container roda com UID arbitrário e GID 0, ignorando o `USER` do Dockerfile — **o CrewAI quebrava no import** ao criar `$HOME/.local/share` para o storage do ChromaDB | `HOME=/app`, `XDG_DATA_HOME`/`XDG_CACHE_HOME` sob `/app` e `chgrp -R 0 /app && chmod -R g=u /app` (receita de UID arbitrário) |
 | Conexões ociosas são encerradas em 55 s | Heartbeat de SSE já configurado em 15 s |
 
@@ -139,3 +160,69 @@ diretório, mantendo `$HOME/.local/share` como base.
 Dois testes no CI impedem a regressão: um roda o import do worker com
 `--user 54321:0`, outro sobe a API com `$PORT` arbitrário e exige resposta em
 `/health`.
+
+## O que apareceu apenas em produção
+
+A simulação local cobriu o arranque dos processos, mas dois problemas só se
+revelaram com a infraestrutura real do provedor.
+
+### 1. Push rejeitado: `error from registry: unsupported`
+
+O Docker Desktop com **containerd image store** grava manifests em formato OCI;
+o registry do Heroku aceita apenas **Docker manifest v2**. Nem
+`--provenance=false` nem `--platform linux/amd64` resolvem — a correção é
+exportar com `oci-mediatypes=false`:
+
+```powershell
+docker buildx build --target web --provenance=false --sbom=false `
+  --output "type=registry,name=registry.heroku.com/APP/web,oci-mediatypes=false,push=true" .
+```
+
+A alternativa seria desligar o containerd image store no Docker Desktop do
+desenvolvedor — preferimos a flag, que não exige mudança de ambiente.
+
+### 2. Toda geração falhava com `CERTIFICATE_VERIFY_FAILED`
+
+O sintoma era desconcertante: o `/health` reportava `redis: ok`, o
+`CacheService` logava conexão bem-sucedida — e um segundo depois o job morria
+em erro de certificado. A fábrica de clientes estava correta (verificado:
+`CERT_NONE` aplicado nos clientes sync **e** async). Quem falhava era outro:
+
+```text
+crewai/utilities/lock_store.py:67 → with portalocker.RedisLock(
+portalocker/redis.py:144 → acquire
+```
+
+```python
+# crewai/utilities/lock_store.py
+_REDIS_URL: str | None = os.environ.get("REDIS_URL")   # constante de módulo
+```
+
+O CrewAI lê `REDIS_URL` **no import** e, havendo valor, usa
+`portalocker.RedisLock` para sincronizar o storage de task outputs — com um
+cliente Redis próprio, sem configuração de certificado.
+
+Retirar a variável dentro de `configure_llm_runtime` **não resolve**:
+`src/worker/settings.py` importa o CrewAI antes de o `startup()` do SAQ rodar.
+A solução foi [`src/bootstrap.py`](../reference/runtime.md), chamado **acima dos
+imports de domínio** nos entrypoints.
+
+Detalhe que um teste pegou antes do deploy: a primeira versão **apagava**
+`REDIS_URL`, e aí a própria aplicação perdia a URL — o worker não subiria. A
+variável é **movida** para `APP_REDIS_URL`, que `Settings` lê com precedência
+via `AliasChoices`.
+
+A regressão está travada por um teste que roda em subprocesso limpo, com
+`REDIS_URL` de TLS no ambiente, e verifica que o CrewAI **não** enxergou a
+variável depois de importar o módulo do worker — reprova se alguem reordenar os
+imports.
+
+### Lição registrada
+
+Duas das três falhas mais custosas deste deploy foram **efeitos colaterais de
+import de bibliotecas de terceiros** (ChromaDB storage e RedisLock). O item S1
+do PRD eliminou essa classe de problema do nosso código, mas ela reaparece pelas
+dependências — e só aparece quando o ambiente de execução difere do de
+desenvolvimento. Diagnóstico exigiu **stack trace no log de erro do worker**,
+que antes registrava apenas `str(e)`; a mudança para `logger.opt(exception=True)`
+foi o que permitiu localizar a origem.

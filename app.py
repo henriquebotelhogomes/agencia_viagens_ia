@@ -1,21 +1,27 @@
-import io
+# O bootstrap precede os imports de domínio: o CrewAI captura `REDIS_URL` em
+# tempo de import (ver src/bootstrap.py).
+from src.bootstrap import isolate_redis_from_third_parties
 
-import folium
-import streamlit as st
-from streamlit_folium import st_folium
+isolate_redis_from_third_parties()
 
-from src.crew_builder import CrewBuilder
-from src.runtime import configure_llm_runtime
-from src.services.cache_service import get_cache_service
-from src.services.finance_service import FinanceService
-from src.services.geocoding_service import GeocodingService
-from src.utils.localization import (
+import io  # noqa: E402
+
+import folium  # noqa: E402
+import streamlit as st  # noqa: E402
+from streamlit_folium import st_folium  # noqa: E402
+
+from src.crew_builder import CrewBuilder  # noqa: E402
+from src.runtime import configure_llm_runtime  # noqa: E402
+from src.services.cache_service import get_cache_service  # noqa: E402
+from src.services.finance_service import FinanceService  # noqa: E402
+from src.services.geocoding_service import GeocodingService  # noqa: E402
+from src.utils.localization import (  # noqa: E402
     CURRENCY_SYMBOLS,
     LANGUAGE_NAMES,
     currency_label,
     language_name,
 )
-from src.utils.logger import LOG_DIR, add_streamlit_sink, setup_logger
+from src.utils.logger import LOG_DIR, add_streamlit_sink, setup_logger  # noqa: E402
 
 # Configuração do Logger Centralizado
 logger = setup_logger()

@@ -8,6 +8,36 @@ módulo de domínio precise mutar estado global durante o `import`.
     configurar bibliotecas globalmente. Existe um teste que roda em subprocesso
     limpo e falha se essa regra for violada.
 
+## Bootstrap — a exceção necessária
+
+Algumas bibliotecas leem o ambiente em **tempo de import**, guardando o valor
+numa constante de módulo. Para essas, `configure_llm_runtime()` chega tarde: o
+valor já foi capturado.
+
+O caso concreto: o CrewAI faz
+`_REDIS_URL = os.environ.get("REDIS_URL")` em `crewai/utilities/lock_store.py`
+e, havendo valor, usa `portalocker.RedisLock` com um cliente Redis próprio — sem
+a configuração de certificado que provedores gerenciados exigem. Em produção,
+**toda** geração de roteiro morria em `CERTIFICATE_VERIFY_FAILED`
+([ADR-0015](../adr/0015-hospedagem-heroku.md)).
+
+```python
+# Primeiras linhas do entrypoint, acima dos imports de domínio
+from src.bootstrap import isolate_redis_from_third_parties
+
+isolate_redis_from_third_parties()
+```
+
+A variável é **movida** para `APP_REDIS_URL`, que `Settings` lê com precedência
+— a aplicação mantém o Redis, apenas as bibliotecas de terceiros deixam de
+enxergá-lo.
+
+::: src.bootstrap
+    options:
+      show_root_heading: false
+      members:
+        - isolate_redis_from_third_parties
+
 ## Uso
 
 Todo entrypoint (Streamlit hoje; API e worker na Fase 1) chama uma vez, no início:

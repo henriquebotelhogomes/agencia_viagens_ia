@@ -21,13 +21,33 @@ _configured = False
 
 
 def _purge_unreachable_redis(settings: Settings) -> None:
-    """Remove ``REDIS_URL`` do ambiente se o servidor estiver inacessível.
+    """Retira ``REDIS_URL`` do ambiente quando bibliotecas externas não podem usá-la.
 
-    Bibliotecas como LiteLLM e CrewAI leem ``REDIS_URL`` diretamente do ambiente
-    para habilitar cache próprio. Com um host quebrado, elas falham no meio da
-    orquestração. Verificamos uma única vez, de forma explícita, no arranque.
+    LiteLLM e CrewAI leem ``REDIS_URL`` diretamente do ambiente para habilitar
+    cache próprio, construindo o cliente com **configuração própria** — fora da
+    nossa fábrica em :mod:`src.services.redis_client`. Dois cenários as fazem
+    falhar no meio da orquestração:
+
+    1. **Host inacessível** — erro de conexão em cada chamada de LLM.
+    2. **TLS com certificado self-signed** (``rediss://``, padrão do Heroku
+       Key-Value Store) — elas validam a cadeia e recebem
+       ``CERTIFICATE_VERIFY_FAILED``.
+
+    Remover a variável do ambiente não afeta a aplicação: nosso código lê
+    ``settings.REDIS_URL`` e conecta pela fábrica, que trata o TLS. O único
+    efeito é desligar o cache interno dessas bibliotecas — que não usamos, pois
+    o cache de roteiros é nosso (``CacheService``).
     """
     if not settings.REDIS_URL:
+        return
+
+    if settings.REDIS_URL.startswith("rediss://"):
+        logger.info(
+            "Redis com TLS self-signed: REDIS_URL retirada do ambiente para que "
+            "LiteLLM e CrewAI não tentem conectar sem a config de certificado. "
+            "O cache da aplicação segue ativo pela fábrica de clientes."
+        )
+        os.environ.pop("REDIS_URL", None)
         return
 
     try:

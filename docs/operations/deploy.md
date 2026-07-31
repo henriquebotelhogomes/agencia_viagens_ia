@@ -24,17 +24,24 @@ flowchart LR
     worker -->|LLM, busca, geocoding| externo["APIs externas"]
 ```
 
-Uma imagem única serve os três papéis (`web`, `worker`, `release`), porque o
-container stack **não faz cache de layers** — cada imagem extra custaria um build
-completo.
+Uma imagem por process type (`web`, `worker`, `release`), todas herdando do
+estágio `runtime` do Dockerfile — compartilham camadas, então cada uma custa
+apenas a camada do comando.
+
+!!! info "Publicação pelo Container Registry, não por `git push`"
+    O `git push heroku` trava no Windows: o Git Credential Manager abre uma
+    janela de autenticação e o comando fica pendurado. Além disso, o build
+    remoto do container stack **não tem cache** — publicar imagens construídas
+    localmente é mais rápido. Ver [ADR-0015](../adr/0015-hospedagem-heroku.md).
 
 ## Pré-requisitos
 
 | Item | Como obter |
 | ---- | ---------- |
-| Heroku CLI | `npm install -g heroku` |
+| Heroku CLI | `npm install -g heroku`, depois `heroku login` |
+| Docker | Necessário para construir as imagens localmente |
 | Conta com cartão verificado | Exigido para add-ons, mesmo com crédito disponível |
-| Crédito de estudante | [education.github.com/pack](https://education.github.com/pack) → Heroku → *Get access* |
+| Crédito de estudante | [heroku.com/github-students/signup](https://heroku.com/github-students/signup) — a inscrição é no site do Heroku, não na página do GitHub |
 | Plano Eco assinado | Dashboard → Billing → *Subscribe to Eco* (US$ 5/mês) |
 
 !!! warning "Resgate o crédito antes de provisionar"
@@ -48,8 +55,8 @@ heroku login
 heroku create voyager-ia --stack container
 ```
 
-O `--stack container` instrui o Heroku a ler o [`heroku.yml`](https://github.com/henriquebotelhogomes/agencia_viagens_ia/blob/master/heroku.yml)
-em vez de detectar um buildpack.
+O `--stack container` instrui o Heroku a servir imagens Docker em vez de
+detectar um buildpack.
 
 ## 2. Provisionar os add-ons
 
@@ -111,19 +118,34 @@ heroku config:set --app voyager-ia \
 
 ## 4. Publicar
 
-```bash
-heroku git:remote --app voyager-ia
-git push heroku master
+```powershell
+pwsh scripts/deploy_heroku.ps1
 ```
 
-O deploy executa, nesta ordem: build da imagem → **release phase**
-(`alembic upgrade head`) → troca dos dynos. Se a migration falhar, o release é
-abortado e a versão anterior **permanece no ar**.
+O script constrói as três imagens, envia ao registry e libera. A ordem é: build
+→ push → **release phase** (`alembic upgrade head`) → troca dos dynos. Se a
+migration falhar, o release é abortado e a versão anterior **permanece no ar**.
 
-## 5. Ligar o worker
+Equivalente manual, se preciso publicar um process type isolado:
+
+```powershell
+heroku container:login
+docker buildx build --target web --provenance=false --sbom=false `
+  --output "type=registry,name=registry.heroku.com/voyager-ia/web,oci-mediatypes=false,push=true" .
+heroku container:release web --app voyager-ia
+```
+
+!!! warning "`oci-mediatypes=false` não é opcional"
+    O Docker Desktop com containerd image store grava manifests em OCI, e o
+    registry do Heroku aceita apenas Docker manifest v2. Sem a flag, o push
+    falha com `error from registry: unsupported`.
+
+## 5. Ligar os dynos
 
 ```bash
 heroku ps:scale web=1 worker=1 --app voyager-ia
+# Dynos sobem como Basic (US$ 7 cada); trocar para Eco mantém o custo no crédito
+heroku ps:type web=eco worker=eco --app voyager-ia
 ```
 
 !!! note "Sobre o adormecimento no Eco"
@@ -135,10 +157,10 @@ heroku ps:scale web=1 worker=1 --app voyager-ia
 
 ```bash
 # Dependências reportadas pela própria aplicação
-curl https://voyager-ia-<hash>.herokuapp.com/health
+curl https://voyager-ia-d97e5ffe11f1.herokuapp.com/health
 
 # Fluxo completo (enfileira, acompanha e busca o resultado)
-uv run python -m scripts.e2e_smoke --base-url https://voyager-ia-<hash>.herokuapp.com
+uv run python -m scripts.e2e_smoke --base-url https://voyager-ia-d97e5ffe11f1.herokuapp.com
 ```
 
 Checklist de aceitação:
@@ -172,7 +194,30 @@ ser 2 em produção.
 
 1. Está escalado? `heroku ps` deve listar `worker.1`.
 2. Dormindo? Acesse a aplicação para acordar os dynos.
-3. Erro de TLS no Redis indica que a conexão não passou pela fábrica de clientes.
+
+### `CERTIFICATE_VERIFY_FAILED` durante a geração
+
+Sintoma enganoso: `/health` reporta `redis: ok` e o cache conecta, mas todo job
+falha em ~1 s.
+
+Causa: alguma biblioteca conectou no Redis **fora** da fábrica em
+`src/services/redis_client.py`. O CrewAI faz isso lendo `REDIS_URL` no import
+(ver [ADR-0015](../adr/0015-hospedagem-heroku.md)).
+
+Diagnóstico: `heroku logs --dyno worker` e procure o traceback — a linha que
+cria a conexão aponta a biblioteca culpada. Confirme que
+`isolate_redis_from_third_parties()` roda **acima** dos imports de domínio no
+entrypoint.
+
+### `error from registry: unsupported` no push
+
+O manifest está em formato OCI. Use `oci-mediatypes=false` no `--output` do
+`docker buildx build` (o script de deploy já faz isso).
+
+### `git push heroku` trava sem saída
+
+O Git Credential Manager abriu uma janela de autenticação aguardando interação.
+Use `scripts/deploy_heroku.ps1` — o Container Registry autentica por token.
 
 ### `Error R10 (Boot timeout)`
 

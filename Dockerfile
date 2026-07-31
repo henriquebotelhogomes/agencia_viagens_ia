@@ -82,3 +82,24 @@ USER app
 EXPOSE 8501
 
 CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+
+############################################
+# Estágios de deploy (ADR-0015)
+#
+# O Heroku Container Registry entrega uma imagem por process type, cada uma com
+# seu próprio CMD. Os três herdam de `runtime`, então compartilham camadas: o
+# build extra custa apenas a camada do comando.
+#
+# Todos usam a forma shell do CMD de propósito — a plataforma injeta `$PORT` em
+# tempo de execução e a forma exec não expandiria a variável.
+############################################
+FROM runtime AS web
+CMD ["sh", "-c", "uvicorn src.api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+
+FROM runtime AS worker
+CMD ["sh", "-c", "saq src.worker.settings.settings"]
+
+# Release phase: se a migration falhar, o Heroku aborta o deploy e mantém a
+# versão anterior no ar.
+FROM runtime AS release
+CMD ["sh", "-c", "alembic upgrade head"]

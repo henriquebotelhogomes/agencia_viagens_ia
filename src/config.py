@@ -10,7 +10,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import SecretStr, field_validator
+from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Localiza o diretório raiz do projeto (onde está o .env)
@@ -79,7 +79,13 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------
     # Infraestrutura
     # ------------------------------------------------------------------
-    REDIS_URL: str = ""
+    REDIS_URL: str = Field(
+        default="",
+        # `APP_REDIS_URL` tem precedência: é onde o bootstrap guarda a URL ao
+        # esconder `REDIS_URL` de bibliotecas que leem o ambiente no import
+        # (ver src/bootstrap.py).
+        validation_alias=AliasChoices("APP_REDIS_URL", "REDIS_URL"),
+    )
     REDIS_CONNECT_TIMEOUT: float = 2.0
     DATABASE_URL: str = ""
     # Pool de conexões do PostgreSQL (ADR-0008)

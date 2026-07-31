@@ -95,6 +95,36 @@ def test_purge_keeps_reachable_redis(mocker) -> None:
     assert os.environ["REDIS_URL"] == "redis://localhost:6379/0"
 
 
+def test_purge_remove_redis_com_tls_self_signed(mocker) -> None:
+    """Redis `rediss://` sai do ambiente mesmo estando acessível.
+
+    Regressão de produção (2026-07-30): o Heroku Key-Value Store usa certificado
+    self-signed. Nossa fábrica de clientes trata isso, mas LiteLLM e CrewAI
+    constroem o próprio cliente a partir do ambiente e falhavam com
+    ``CERTIFICATE_VERIFY_FAILED`` no meio da orquestração — toda execução
+    terminava em `failed`.
+    """
+    url = "rediss://:senha@host.compute.amazonaws.com:26770"
+    mocker.patch.dict(os.environ, {"REDIS_URL": url}, clear=True)
+    # Cliente saudável: a remoção não depende de falha de conexão
+    mocker.patch("src.runtime.create_client", return_value=mocker.MagicMock())
+
+    _purge_unreachable_redis(Settings(_env_file=None, REDIS_URL=url))
+
+    assert "REDIS_URL" not in os.environ
+
+
+def test_purge_com_tls_nao_afeta_a_configuracao_da_app() -> None:
+    """A aplicação lê de ``Settings``, não do ambiente — o cache segue ativo."""
+    url = "rediss://:senha@host:26770"
+    settings = Settings(_env_file=None, REDIS_URL=url)
+
+    _purge_unreachable_redis(settings)
+
+    assert url == settings.REDIS_URL
+    assert settings.cache_enabled is True
+
+
 def test_configure_llm_runtime_is_idempotent(mocker) -> None:
     """A configuração roda uma única vez por processo, salvo ``force=True``."""
     reset_runtime_state()
