@@ -44,6 +44,55 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage.xml
 
+  frontend:
+    name: Frontend (PRD D5)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        # `ci` respeita o lockfile; `install` poderia atualizar versões
+        run: npm ci
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Testes de unidade e componente
+        # O gate de cobertura está em vitest.config.ts
+        run: npm run test:cov
+
+      - name: Build de produção
+        run: npm run build
+
+      - name: Instalar navegador do Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Testes E2E
+        # Sem NEXT_PUBLIC_API_URL, o cliente aponta para localhost:8000, que não
+        # existe no CI. Os testes desta suíte não dependem da API.
+        run: npx playwright test
+
+      - name: Publicar relatório do Playwright em caso de falha
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
+
   docs:
     name: Documentação viva (PRD D13)
     runs-on: ubuntu-latest

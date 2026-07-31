@@ -23,7 +23,7 @@ from src.api.errors import (
     unhandled_exception_handler,
     validation_exception_handler,
 )
-from src.api.routers import executions, health
+from src.api.routers import executions, finops, health
 from src.api.schemas import ProblemDetailResponse
 from src.config import get_settings
 from src.db.base import dispose_engine
@@ -139,6 +139,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(executions.router)
+    app.include_router(finops.router)
 
     def custom_openapi() -> dict[str, Any]:
         if app.openapi_schema:

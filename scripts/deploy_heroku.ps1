@@ -24,21 +24,24 @@
     Apenas envia as imagens, sem liberar. Util para preparar um rollout.
 
 .EXAMPLE
-    pwsh scripts/deploy_heroku.ps1
+    powershell -File scripts/deploy_heroku.ps1
 
 .EXAMPLE
-    pwsh scripts/deploy_heroku.ps1 -App voyager-staging
+    powershell -File scripts/deploy_heroku.ps1 -App voyager-staging
 #>
 param(
     [string]$App = "voyager-ia",
     [switch]$SkipRelease
 )
 
-$ErrorActionPreference = "Stop"
+# `Continue` de proposito: o docker e o heroku escrevem progresso no stderr, e
+# com `Stop` o PowerShell abortaria o script na primeira linha de progresso.
+# O controle de falha e feito checando exit code e saida de cada comando.
+$ErrorActionPreference = "Continue"
 $processTypes = @("web", "worker", "release")
 
 Write-Host "== Autenticando no Container Registry ==" -ForegroundColor Cyan
-heroku container:login
+heroku container:login 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "Falha no container:login. Rode 'heroku login' primeiro." }
 
 foreach ($type in $processTypes) {
@@ -63,11 +66,15 @@ if ($SkipRelease) {
 }
 
 Write-Host "== Release (a imagem 'release' aplica as migrations) ==" -ForegroundColor Cyan
-heroku container:release @processTypes --app $App
-if ($LASTEXITCODE -ne 0) { throw "container:release falhou." }
+$released = heroku container:release @processTypes --app $App 2>&1 | Out-String
+if ($released -notmatch "done") {
+    Write-Host $released
+    throw "container:release falhou."
+}
+Write-Host "   release concluido" -ForegroundColor Green
 
 Write-Host "`n== Estado dos dynos ==" -ForegroundColor Cyan
-heroku ps --app $App
+heroku ps --app $App 2>&1 | Out-String | Write-Host
 
 Write-Host "`nVerifique a saude da aplicacao:" -ForegroundColor Cyan
 Write-Host "  curl https://$App.herokuapp.com/health"

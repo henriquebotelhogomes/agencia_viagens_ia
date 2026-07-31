@@ -114,6 +114,7 @@ nav:
       - ADR-0013 Documentação viva: adr/0013-documentacao-viva.md
       - ADR-0014 Fila SAQ: adr/0014-fila-saq.md
       - ADR-0015 Hospedagem Heroku: adr/0015-hospedagem-heroku.md
+      - ADR-0016 Internacionalização: adr/0016-i18n.md
   - Operação:
       - Deploy: operations/deploy.md
       - Observabilidade: operations/observability.md
@@ -122,6 +123,8 @@ nav:
   - Referência de API:
       - Configuração: reference/config.md
       - Runtime: reference/runtime.md
+      - Frontend: reference/frontend.md
+      - Testes: reference/testing.md
       - API HTTP: reference/api.md
       - Persistência e worker: reference/persistence.md
       - Agentes e tarefas: reference/agents.md

@@ -131,38 +131,59 @@ class GeocodingService:
     # Geocoding (Geoapify + cache Redis; Nominatim como fallback)
     # ------------------------------------------------------------------
     @staticmethod
-    def _cache_key(location_name: str) -> str:
-        normalized = location_name.lower().strip()
+    def _cache_key(location_name: str, context: str = "") -> str:
+        normalized = f"{location_name.lower().strip()}|{context.lower().strip()}"
         return f"geocode:{hashlib.sha256(normalized.encode()).hexdigest()}"
 
-    def get_coordinates(self, location_name: str) -> tuple[float, float] | None:
+    @staticmethod
+    def _search_text(location_name: str, context: str = "") -> str:
+        """Monta a busca incluindo o destino, para desambiguar homónimos.
+
+        Sem o contexto, "Time Out Market" resolve para Nova York e "Mercado do
+        Bolhão" pode cair em qualquer cidade — o mapa do roteiro de Porto
+        aparecia com pinos espalhados pela Europa (bug real, 2026-07-31).
+        """
+        if not context or context.lower() in location_name.lower():
+            return location_name
+        return f"{location_name}, {context}"
+
+    def get_coordinates(
+        self, location_name: str, context: str = ""
+    ) -> tuple[float, float] | None:
         """
         Obtém as coordenadas (lat, lon) de um local.
 
         Ordem: cache Redis → Geoapify → Nominatim (fallback sem chave).
+
+        Args:
+            location_name: nome do ponto como apareceu no roteiro.
+            context: destino da viagem, usado para desambiguar a busca.
         """
         if not location_name or not location_name.strip():
             return None
 
-        cached = self._coords_from_cache(location_name)
+        cached = self._coords_from_cache(location_name, context)
         if cached:
             return cached
 
+        query = self._search_text(location_name, context)
         coords = (
-            self._geocode_geoapify(location_name)
+            self._geocode_geoapify(query)
             if self.settings.geoapify_api_key
-            else self._geocode_nominatim(location_name)
+            else self._geocode_nominatim(query)
         )
 
         if coords:
-            self._save_coords_to_cache(location_name, coords)
+            self._save_coords_to_cache(location_name, coords, context)
         return coords
 
-    def _coords_from_cache(self, location_name: str) -> tuple[float, float] | None:
+    def _coords_from_cache(
+        self, location_name: str, context: str = ""
+    ) -> tuple[float, float] | None:
         if not (self.cache and self.cache.enabled and self.cache.client):
             return None
         try:
-            raw = self.cache.client.get(self._cache_key(location_name))
+            raw = self.cache.client.get(self._cache_key(location_name, context))
             if raw:
                 lat, lon = json.loads(str(raw))
                 return (float(lat), float(lon))
@@ -171,13 +192,13 @@ class GeocodingService:
         return None
 
     def _save_coords_to_cache(
-        self, location_name: str, coords: tuple[float, float]
+        self, location_name: str, coords: tuple[float, float], context: str = ""
     ) -> None:
         if not (self.cache and self.cache.enabled and self.cache.client):
             return
         try:
             self.cache.client.setex(
-                self._cache_key(location_name),
+                self._cache_key(location_name, context),
                 self.settings.GEOCODING_CACHE_TTL_SECONDS,
                 json.dumps(coords),
             )
@@ -220,15 +241,22 @@ class GeocodingService:
             logger.warning(f"Nominatim falhou para '{location_name}': {e}")
         return None
 
-    def process_itinerary_locations(self, itinerary_text: str) -> list[Location]:
+    def process_itinerary_locations(
+        self, itinerary_text: str, context: str = ""
+    ) -> list[Location]:
         """
         Fluxo completo: extrai nomes de locais e busca coordenadas.
+
+        Args:
+            itinerary_text: roteiro em markdown produzido pelos agentes.
+            context: destino da viagem — evita que um nome genérico caia em outra
+                cidade (ver :meth:`_search_text`).
         """
         names = self.extract_locations(itinerary_text)
         results = []
 
         for name in names:
-            coords = self.get_coordinates(name)
+            coords = self.get_coordinates(name, context)
             if coords:
                 results.append(
                     Location(name=name, lat=coords[0], lon=coords[1], type="marker")

@@ -191,3 +191,66 @@ def test_process_itinerary_locations_full_flow(mocker) -> None:
     assert results[0].lat == 48.8566
     assert results[1].name == "London"
     assert results[1].lat == 51.5074
+
+
+# ---------------------------------------------------------------------------
+# Desambiguacao pelo destino (regressao de produto, 2026-07-31)
+# ---------------------------------------------------------------------------
+def test_busca_inclui_o_destino_como_contexto() -> None:
+    """Sem contexto, "Time Out Market" resolvia para Nova York."""
+    service = GeocodingService(_settings())
+
+    assert (
+        service._search_text("Time Out Market", "Porto, Portugal")
+        == "Time Out Market, Porto, Portugal"
+    )
+
+
+def test_busca_nao_repete_o_destino_quando_ja_presente() -> None:
+    """Evita "Porto, Portugal, Porto, Portugal" na query."""
+    service = GeocodingService(_settings())
+
+    assert (
+        service._search_text("Ribeira, Porto, Portugal", "Porto, Portugal")
+        == "Ribeira, Porto, Portugal"
+    )
+
+
+def test_busca_sem_contexto_usa_apenas_o_nome() -> None:
+    service = GeocodingService(_settings())
+
+    assert service._search_text("Torre Eiffel") == "Torre Eiffel"
+
+
+def test_cache_separa_o_mesmo_nome_em_destinos_diferentes() -> None:
+    """Um "Mercado Central" em Lisboa nao pode servir coordenadas de Madri."""
+    service = GeocodingService(_settings())
+
+    lisboa = service._cache_key("Mercado Central", "Lisboa, Portugal")
+    madri = service._cache_key("Mercado Central", "Madri, Espanha")
+
+    assert lisboa != madri
+
+
+def test_geocoding_recebe_query_com_contexto(mocker) -> None:
+    """O contexto precisa chegar ao provedor, nao parar no meio do caminho."""
+    service = GeocodingService(_settings(GEOAPIFY_API_KEY="mock_geo_key"))
+    geoapify = mocker.patch.object(
+        service, "_geocode_geoapify", return_value=(41.15, -8.61)
+    )
+
+    service.get_coordinates("Mercado do Bolhao", "Porto, Portugal")
+
+    geoapify.assert_called_once_with("Mercado do Bolhao, Porto, Portugal")
+
+
+def test_process_itinerary_locations_propaga_o_contexto(mocker) -> None:
+    service = GeocodingService(_settings(GEOAPIFY_API_KEY="mock_geo_key"))
+    mocker.patch.object(service, "extract_locations", return_value=["Ribeira"])
+    coords = mocker.patch.object(
+        service, "get_coordinates", return_value=(41.14, -8.61)
+    )
+
+    service.process_itinerary_locations("texto", "Porto, Portugal")
+
+    coords.assert_called_once_with("Ribeira", "Porto, Portugal")

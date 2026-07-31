@@ -162,3 +162,34 @@ class ProblemDetailResponse(BaseModel):
     status: int = Field(description="Código HTTP da resposta")
     detail: str = Field(description="Explicação específica desta ocorrência")
     instance: str | None = Field(default=None, description="Caminho da requisição")
+
+
+class FinOpsDailyPoint(BaseModel):
+    """Consumo de um dia — alimenta o gráfico da série temporal."""
+
+    date: str
+    total_tokens: int
+    cost_usd: float
+    executions: int
+
+
+class FinOpsSummary(BaseModel):
+    """Custo operacional agregado do período.
+
+    Todos os valores derivam de tokens **medidos** pelo provedor. O
+    `baseline_cost_usd` é o que as mesmas chamadas custariam no GPT-4o, base da
+    comparação de economia.
+    """
+
+    window_days: int
+    executions: int
+    total_tokens: int
+    cost_usd: float
+    baseline_cost_usd: float
+    savings_usd: float
+    #: Fração de execuções servidas do cache, entre 0 e 1
+    cache_hit_ratio: float
+    avg_duration_seconds: float
+    #: Contagem por estado (`succeeded`, `failed`, …)
+    by_status: dict[str, int]
+    daily: list[FinOpsDailyPoint]

@@ -87,10 +87,11 @@ graph TD
 | :--- | :--- |
 | **IA & LLM** | CrewAI, litellm, OpenCode Go (DeepSeek/Kimi), OpenRouter (Gemini) |
 | **Ferramentas dos agentes** | Tavily (busca web), Geoapify (geocoding) |
-| **Backend & Cache** | Python 3.12, Redis, Pydantic v2 (Settings + SecretStr) |
-| **Frontend** | Streamlit (playground) — Next.js 15 planejado |
+| **Backend & Cache** | FastAPI, Python 3.12, SQLAlchemy async + PostgreSQL, SAQ (worker), Redis, Pydantic v2 (Settings + SecretStr) |
+| **Frontend** | Next.js 16 (App Router) + React 19 + TypeScript, Tailwind 4, MapLibre, TanStack Query, Zod |
 | **DevOps** | Docker multi-stage non-root, GitHub Actions, Ruff, mypy strict, deploy no Heroku (Container Registry), uv |
-| **Observabilidade** | Langfuse (tracing de LLM), Loguru (JSON em stdout), FinOps por tokens reais |
+| **Testes** | pytest + schemathesis (backend), Vitest + Playwright (frontend), gate de cobertura 90% |
+| **Observabilidade** | OpenTelemetry (API/worker), Langfuse (tracing de LLM), Loguru (JSON em stdout), FinOps por tokens reais |
 | **Documentação** | MkDocs Material + mkdocstrings, ADRs versionados |
 
 ## 💻 Como rodar na sua máquina

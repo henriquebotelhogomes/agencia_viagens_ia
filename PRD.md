@@ -3,7 +3,7 @@
 > **Documento de Requisitos de Produto (PRD)** — consolida a revisão estratégica do
 > projeto, as decisões tomadas e o plano de modernização da arquitetura.
 >
-> **Versão:** 1.20 · **Status:** ✅ Fases 0 e 1 concluídas · 🌐 [API em produção](https://voyager-ia-d97e5ffe11f1.herokuapp.com/health) · 📚 [Documentação](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) · **Complementa:** [`specs/`](./specs/README.md)
+> **Versão:** 1.21 · **Status:** ✅ Fases 0, 1 e 2(dev) · 🌐 [API em produção](https://voyager-ia-d97e5ffe11f1.herokuapp.com/health) · 📚 [Documentação](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) · **Complementa:** [`specs/`](./specs/README.md)
 
 ***
 
@@ -514,13 +514,24 @@ extração da API (Fase 0). O status é controlado no checklist da §15.
 
 * **DoD:** roteiro gerado ponta a ponta via API, com trace completo e custo real gravado.
 
-### Fase 2 — Frontend Next.js (2-3 semanas)
+### Fase 2 — Frontend Next.js (concluída em dev)
 
-* Briefing → streaming de agentes → roteiro → mapa MapLibre → export MD.
+* ✅ Briefing → streaming de agentes (SSE) → roteiro em Markdown → mapa MapLibre
+  sincronizado → painel FinOps público.
 
-* Design system (shadcn/ui), i18n pt-BR/EN, painel FinOps público.
+* ✅ Design system próprio (tokens terracota/stone, tema claro/escuro), sem
+  lock-in de biblioteca de componentes.
 
-* **DoD:** demo pública no Heroku; Lighthouse > 90; Streamlit aposentado.
+* ✅ Testes: Vitest (67, cobertura 98%) + Playwright (desktop e mobile); tudo no
+  CI. Contrato tipado com Zod espelhando o Pydantic.
+
+* ✅ i18n de **conteúdo** (roteiro + moeda) entregue; interface em PT-BR com o
+  caminho registrado ([ADR-0016](docs/adr/0016-i18n.md)).
+
+* Pendente: **deploy** do frontend (aguarda decisão de plataforma — Vercel vs
+  Heroku); Lighthouse > 90 medido em produção; aposentadoria formal do Streamlit.
+
+* **DoD:** demo pública no ar; Lighthouse > 90; Streamlit aposentado.
 
 ### Fase 3 — Excelência operacional (contínuo)
 
@@ -595,6 +606,7 @@ extração da API (Fase 0). O status é controlado no checklist da §15.
 | 1.18   | **OpenTelemetry na API e no worker** (última pendência técnica da Fase 1): `src/telemetry.py` com inicialização explícita e no-op sem endpoint; FastAPI/SQLAlchemy/Redis instrumentados; span raiz por job com `execution_id`. Versões alinhadas ao OTel que o CrewAI já traz (SDK 1.34.x), sem upgrade em cascata. 162 testes |
 | 1.19   | **4º bug de contrato + teste determinístico**: corpo JSON malformado produzia **400 não documentado** (o Starlette responde antes do Pydantic); a OpenAPI agora documenta 400 em toda operação com `requestBody`. O teste passou a usar `derandomize=True` com 60 exemplos/rota — sem isso a falha aparecia só às vezes, o que tornaria o CI intermitente. Estabilidade verificada em 3 execuções completas |
 | 1.20   | **🌐 Fase 1 EM PRODUÇÃO no Heroku**: geração completa validada (93s, 18.711 tokens, 8 locais, EUR), migrations via release phase, dynos Eco dentro do crédito. Três obstáculos reais superados: `git push heroku` travado pelo Git Credential Manager (→ Container Registry), `error from registry: unsupported` do containerd image store (→ `oci-mediatypes=false`) e **CrewAI lendo `REDIS_URL` no import** e conectando sem TLS (→ `src/bootstrap.py`). 168 testes |
+| 1.21   | **Fase 2 (frontend) concluída em dev**: Next.js 16 + React 19, design system próprio, briefing validado, execução ao vivo via SSE, roteiro + mapa MapLibre sincronizado, painel FinOps (novo endpoint `/v1/finops`). Bug real de produto corrigido (geocoding sem contexto do destino punha pinos no país errado). i18n de conteúdo entregue, interface adiada com decisão registrada (ADR-0016). Backend 182 testes; frontend 67 unit + 16 E2E, cobertura 98% |
 
 ***
 

@@ -84,7 +84,22 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # Playground Streamlit (aposentado quando o frontend Next.js assumir)
+  # Frontend Next.js (ADR-0005) — interface de produto
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # A URL entra no bundle em build time; aponta para a API deste compose
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Playground Streamlit — aposentado como produto (ADR-0005); mantido sob
+  # profile para inspecionar prompts/agentes durante a transição.
   streamlit:
     profiles:
       - playground

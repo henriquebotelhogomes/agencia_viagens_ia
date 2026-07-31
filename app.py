@@ -58,8 +58,8 @@ cache_service = get_cache_service()
 
 # Funções Auxiliares de Cache
 @st.cache_data
-def get_itinerary_map_data(itinerary_str: str):
-    locais_objs = geo_service.process_itinerary_locations(itinerary_str)
+def get_itinerary_map_data(itinerary_str: str, destino: str = ""):
+    locais_objs = geo_service.process_itinerary_locations(itinerary_str, destino)
     # Convertemos para dicionários para evitar erros de serialização (Pickle)
     return [
         {"name": loc.name, "lat": loc.lat, "lon": loc.lon}
@@ -235,7 +235,7 @@ if submitted:
 
                             # Processa locais do roteiro
                             # (com cache para não repetir chamadas caras)
-                            locais = get_itinerary_map_data(roteiro_str)
+                            locais = get_itinerary_map_data(roteiro_str, destino)
 
                             if locais:
                                 for loc in locais:

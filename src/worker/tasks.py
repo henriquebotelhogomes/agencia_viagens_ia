@@ -95,7 +95,7 @@ async def _run_job(
             await _publish(
                 progress, execution, "Geolocalizando pontos do roteiro…", STEP_GEOCODING
             )
-            geojson = await _build_geojson(markdown)
+            geojson = await _build_geojson(markdown, execution.destino)
 
             session.add(
                 Itinerary(
@@ -182,10 +182,16 @@ async def _produce_itinerary(
     return markdown, getattr(result, "token_usage", None), builder.use_fallback, False
 
 
-async def _build_geojson(markdown: str) -> dict[str, Any] | None:
-    """Extrai e geocodifica os locais do roteiro, no formato GeoJSON (FR-05)."""
+async def _build_geojson(markdown: str, destino: str) -> dict[str, Any] | None:
+    """Extrai e geocodifica os locais do roteiro, no formato GeoJSON (FR-05).
+
+    O destino entra como contexto da busca: sem ele, nomes genéricos resolvem
+    para a cidade errada e o mapa fica com pinos em outro país.
+    """
     service = GeocodingService(cache=get_cache_service())
-    locations = await asyncio.to_thread(service.process_itinerary_locations, markdown)
+    locations = await asyncio.to_thread(
+        service.process_itinerary_locations, markdown, destino
+    )
     if not locations:
         return None
     return {
