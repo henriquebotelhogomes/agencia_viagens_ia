@@ -207,3 +207,9 @@
     transparent
   );
 }
+
+/* Popups do MapLibre mantêm texto legível no dark mode — o fundo
+   do popup é sempre branco, então a cor do texto também precisa ser. */
+.maplibregl-popup-content {
+  color: oklch(21% 0.012 55) !important;
+}
