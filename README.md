@@ -1,4 +1,4 @@
-# ✈️ Agência de Viagens Multiagentes: Engenharia de IA em Produção
+# ✈️ Voyager AI — Planejamento de Viagens com IA Multiagente em Produção
 
 [![CI/CD Pipeline](https://github.com/henriquebotelhogomes/agencia_viagens_ia/actions/workflows/ci.yml/badge.svg)](https://github.com/henriquebotelhogomes/agencia_viagens_ia/actions)
 [![Docs](https://img.shields.io/badge/docs-mkdocs%20material-blue.svg)](https://henriquebotelhogomes.github.io/agencia_viagens_ia/)
@@ -14,95 +14,172 @@
 
 ---
 
-## 📚 Documentação
+## 🎯 O que é
 
-| Documento | Conteúdo |
+Um **sistema autônomo de planejamento de viagens** que orquestra três agentes de IA especializados — um guia local, um analista de logística e um arquiteto de roteiros — para produzir um itinerário completo: pesquisa atrações em tempo real, calcula custos reais na moeda escolhida, geolocaliza cada ponto no mapa e audita o próprio custo de operação (FinOps).
+
+Diferente de um "wrapper" de API, cada decisão de engenharia foi tomada como se o sistema fosse para produção enterprise — porque foi.
+
+### Por que não usar apenas o ChatGPT?
+
+IAs genéricas **alucinam** sobre horários, preços e locais que já fecharam. Aqui, cada afirmação do roteiro passa por uma cadeia de validação: o agente de logística pesquisa companhias aéreas e hotéis reais via busca web, os locais são geocodificados contra uma base geográfica real (Geoapify) e o custo é medido em tokens — não estimado.
+
+---
+
+## 📊 Resultados em produção
+
+| Métrica | Valor |
 | :--- | :--- |
-| [**Documentação técnica**](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) | Arquitetura, C4, referência de API, runbook |
-| [**ADRs**](docs/adr/index.md) | 13 decisões arquiteturais com trade-offs |
-| [**PRD.md**](PRD.md) | Escopo, decisões de produto e roadmap |
-| [**CONTRIBUTING.md**](CONTRIBUTING.md) | Padrões de código e fluxo de PR |
+| **Custo por roteiro** | ~US$ 0,006 (vs US$ 0,111 no GPT-4o) — **94% de economia** |
+| **Tokens por execução** | 8.430 (medidos, não estimados) |
+| **Latência p95** | ~51s (SLO: < 90s) · cache hit em milissegundos |
+| **Cobertura de testes** | ≥ 90% (backend e frontend, gate de CI) |
+| **Decisões documentadas** | 17 ADRs com trade-offs explícitos |
 
-## 🗺️ A Jornada: Por que este projeto existe?
+---
 
-Planejar uma viagem costuma ser um processo fragmentado: você pula de aba em aba no navegador, tenta conciliar preços de voos com atrações turísticas e, no fim, ainda se pergunta se o roteiro é logisticamente viável. As IAs genéricas (como o ChatGPT) ajudam, mas frequentemente alucinam sobre horários, locais que já fecharam ou preços desatualizados.
+## 🏗️ Arquitetura
 
-Minha meta aqui foi construir um **sistema autônomo e confiável**. Este projeto não é apenas um "wrapper" de API; é uma orquestração de agentes especializados que pesquisam em tempo real, validam dados geográficos e monitoram o custo da operação (FinOps).
-
-## 🛠️ Arquitetura e Decisões de Engenharia
-
-Em vez de uma única chamada longa para um modelo de linguagem, utilizei o **CrewAI** para dividir o problema em personas distintas. Isso reduz drasticamente as alucinações e permite que cada agente use ferramentas específicas.
+O sistema segue sete princípios: **API-first** (a interface não conhece CrewAI), **assíncrono por padrão** (gerar roteiro é um job, não um request), **12-Factor**, **provider-agnostic de LLM**, **observability-first**, **custo como requisito** e **degradação graciosa** (a falta de um serviço opcional nunca derruba o fluxo).
 
 ```mermaid
 graph TD
-    User((Usuário)) --> FE[Frontend Next.js]
-    FE -->|REST + SSE| API[API FastAPI]
-    API -->|fila| WK[Worker SAQ]
-    WK --> Crew[CrewAI Orchestrator]
+    User((Viajante)) --> FE[Frontend<br/>Next.js 16 + React 19]
+    FE -->|REST + SSE| API[API FastAPI<br/>Pydantic v2]
+    API -->|enqueue| Q[(Redis<br/>fila + cache)]
+    Q --> WK[Worker SAQ<br/>async]
+    WK --> Crew[CrewBuilder<br/>orquestração + failover]
 
-    subgraph Agents
-        A1[🕵️ Guia Local]
-        A2[📊 Analista de Custos]
-        A3[✍️ Editor de Roteiro]
+    subgraph Agents["Equipe CrewAI · Process.sequential"]
+        A1[🕵️ Guia Local<br/>tier fast]
+        A2[📊 Gerente de Logística<br/>tier fast-tools + Tavily]
+        A3[✍️ Arquiteto de Roteiros<br/>tier pro]
+        A1 --> A2 --> A3
     end
 
     Crew --> Agents
-    Agents --> LLM[OpenCode Go / OpenRouter]
-    Agents --> Tools[Tavily - busca web]
+    A1 & A2 & A3 --> GW{Gateway LLM}
+    GW -->|primário| OCG[OpenCode Go<br/>DeepSeek · Kimi · GLM]
+    GW -.->|failover 429/teto| ORT[OpenRouter<br/>Gemini 3.5 Flash]
 
-    subgraph Backend Services
-        Redis[(Redis Cache)]
-        Geo[Geoapify - geocoding]
-        LF[Langfuse - tracing LLM]
-    end
+    A2 --> TV[Tavily<br/>busca web]
 
-    Crew <--> Redis
-    Crew -.traces.-> LF
+    WK --> PG[(PostgreSQL<br/>execuções · roteiros · uso)]
+    WK --> GS[GeocodingService<br/>extração + Geoapify]
+    GS --> Q
 
-    Agents --> Output[Roteiro Final Markdown]
-    Output --> Geo
-    Geo --> Map[Mapa Interativo]
+    A1 & A2 & A3 -.traces.-> LF[Langfuse<br/>tokens · custo · latência]
+
+    A3 --> MD[Roteiro Markdown]
+    MD --> GS
+    GS --> MAP[Mapa MapLibre<br/>pins geolocalizados]
 ```
 
-### Onde foquei minha energia (Destaques Técnicos):
+**O núcleo de domínio (`src/`) não depende da apresentação.** Foi isso que permitiu trocar o Streamlit original pelo Next.js, e os provedores de LLM/busca/geocoding, sem tocar na lógica de agentes — e é o que torna o sistema evoluível.
 
-- **Orquestração Inteligente (CrewAI)**: Os agentes não trabalham isolados. O *Guia Local* descobre os pontos, o *Analista de Custos* valida se cabem no orçamento e o *Editor* garante que o Markdown final seja impecável.
-- **Estratégia de LLM com failover**: Tiers por tipo de tarefa (`fast`, `fast-tools`, `pro`) com **OpenCode Go como gateway primário** e **OpenRouter como rede de segurança**. Modelos vivem em configuração, nunca no código. Ver [ADR-0002](docs/adr/0002-gateways-llm.md).
-- **FinOps com dados reais**: O custo vem dos **tokens medidos** (`CrewOutput.token_usage`), não de estimativa. Medição real: 8.430 tokens por roteiro → **94% de economia** vs GPT-4o.
-- **Eficiência com Redis**: Cache de roteiros (24h) e de geocoding (30 dias) — consulta repetida não queima crédito nem tempo de LLM.
-- **Geolocalização com structured output**: Locais são extraídos do roteiro com **schema Pydantic** (defesa contra prompt injection) e geocodificados via **Geoapify** com cache.
-- **Observabilidade de LLM**: **Langfuse** registra prompt, resposta, tokens e latência de cada chamada; logs JSON em stdout (12-factor) em produção.
-- **Infraestrutura como Código (DevOps)**: Docker **multi-stage** com usuário non-root, `uv` como única fonte de dependências e CI com gates de lint, tipagem estrita, cobertura ≥ 90% e build da documentação.
+---
 
-## ✨ Funcionalidades em Destaque
+## 🤖 Como os agentes trabalham
 
-- **Roteiro Personalizado**: Geração de um itinerário dia a dia com base no destino, origem, duração e interesses específicos do usuário.
-- **Moeda e idioma parametrizáveis**: BRL, USD, EUR ou GBP · pt-BR, en-US ou es-ES — o roteiro sai integralmente na combinação escolhida.
-- **Pesquisa em Tempo Real**: Agentes conectados à internet via **Tavily**, que entrega conteúdo já extraído e otimizado para LLM.
-- **Mapa Interativo**: Mapeamento automático (pins) de hotéis, restaurantes e pontos turísticos sugeridos.
-- **Exportação**: Download do roteiro em **Markdown (.md)**.
-- **Logs em Tempo Real**: Observabilidade do "raciocínio" da IA exibido na interface.
-- **Auditoria FinOps**: Tokens reais e economia comparada ao GPT-4o por execução.
+Em vez de uma única chamada longa (que alucina e estoura contexto), o problema é dividido em **três personas com ferramentas e modelos distintos**, executadas em pipeline sequencial — a saída de cada uma alimenta a próxima.
 
-## 🚀 Stack Tecnológica
+```mermaid
+flowchart TD
+    B([Briefing<br/>origem · destino · dias<br/>interesses · moeda · idioma]) --> CACHE{Cache Redis<br/>SHA-256 do briefing}
 
-| Camada | Tecnologias |
-| :--- | :--- |
-| **IA & LLM** | CrewAI, litellm, OpenCode Go (DeepSeek/Kimi), OpenRouter (Gemini) |
-| **Ferramentas dos agentes** | Tavily (busca web), Geoapify (geocoding) |
-| **Backend & Cache** | FastAPI, Python 3.12, SQLAlchemy async + PostgreSQL, SAQ (worker), Redis, Pydantic v2 (Settings + SecretStr) |
-| **Frontend** | Next.js 16 (App Router) + React 19 + TypeScript, Tailwind 4, MapLibre, TanStack Query, Zod |
-| **DevOps** | Docker multi-stage non-root, GitHub Actions, Ruff, mypy strict, deploy no Heroku (Container Registry), uv |
-| **Testes** | pytest + schemathesis (backend), Vitest + Playwright (frontend), gate de cobertura 90% |
-| **Observabilidade** | OpenTelemetry (API/worker), Langfuse (tracing de LLM), Loguru (JSON em stdout), FinOps por tokens reais |
-| **Documentação** | MkDocs Material + mkdocstrings, ADRs versionados |
+    CACHE -->|hit| HIT([Roteiro pronto<br/>custo US$ 0,00])
 
-## 💻 Como rodar na sua máquina
+    CACHE -->|miss| RUN[CrewBuilder.run]
 
-Diferente de outros projetos que levam minutos para configurar o ambiente, aqui eu uso o **uv** para garantir que tudo seja instantâneo e isolado.
+    RUN --> T1
 
-### 1. Pré-requisitos (APIs)
-Para o funcionamento pleno, você precisará de chaves para:
+    subgraph T1["① Guia Local · tier fast · DeepSeek V4 Flash"]
+        R1[Pesquisa destino + interesses<br/>→ 5 atrações e 3 restaurantes]
+    end
+
+    T1 --> T2
+
+    subgraph T2["② Gerente de Logística · tier fast-tools · Kimi K2.7"]
+        R2[Busca web real via Tavily<br/>companhia aérea · hotel + estrelas · alimentação<br/>→ tabela de custos na moeda pedida]
+    end
+
+    T2 --> T3
+
+    subgraph T3["③ Arquiteto de Roteiros · tier pro · Gemini 3.5 Flash"]
+        R3[Compõe roteiro Markdown<br/>usa EXATAMENTE a tabela do colega logístico<br/>→ cronograma dia a dia + dicas]
+    end
+
+    T3 -->|exceção 429 / teto / indisponível| FO[Failover explícito<br/>reexecuta TODA a crew no OpenRouter]
+    FO --> T1
+
+    T3 --> OK[CrewOutput<br/>+ token_usage real]
+
+    OK --> GEO[Extração de locais<br/>LLM + schema Pydantic<br/>defesa contra prompt injection]
+    GEO --> GC[Geocoding<br/>cache Redis → Geoapify]
+    OK --> FIN[FinOps<br/>custo medido + economia vs GPT-4o]
+
+    GC & FIN --> OUT([Roteiro + Mapa + Painel FinOps])
+
+    OUT --> REF{Usuário quer refinar?}
+    REF -->|instrução de ajuste| RE[Refine<br/>reexecuta a crew com o roteiro<br/>anterior + instrução como contexto]
+    RE --> T1
+    REF -->|não| FIM([Fim])
+```
+
+### Por que essa divisão?
+
+- **Modelos diferentes para tarefas diferentes.** Pesquisa e extração são tarefas baratas (`fast`); logística exige *function calling* confiável para usar o Tavily (`fast-tools`); a redação final precisa de qualidade consistente (`pro`). Pagar preço de modelo frontier para listar atrações seria desperdício.
+- **Failover na camada de aplicação, não do litellm.** O CrewAI 1.x usa providers nativos para prefixos como `openai/`, que não aceitam o parâmetro `fallbacks` do litellm. O retry é explícito no `CrewBuilder.run()` — o ponto de decisão é nosso, testável sem rede.
+- **Refinamento com linhagem de versões.** Um roteiro pode ser refinado por instrução ("troque o hotel por um mais central") ou revertido para qualquer versão anterior — sem reescrever histórico (append-only). Ver [ADR-0017](docs/adr/0017-versionamento-roteiro.md).
+
+---
+
+## 🛠️ Stack e o porquê de cada escolha
+
+| Camada | Escolha | Por quê |
+| :--- | :--- | :--- |
+| **Orquestração de agentes** | CrewAI | Divide o problema em personas com ferramentas próprias, reduzindo alucinação vs. chamada única |
+| **Gateway LLM** | OpenCode Go (primário) + OpenRouter (fallback/`pro`) | Go tem ~US$ 60/mês incluídos na assinatura (custo marginal ~$0); OpenRouter garante que a demo nunca bloqueia por cota e fornece o modelo pago do output final. Ver [ADR-0002](docs/adr/0002-gateways-llm.md) |
+| **Abstração LLM** | litellm | Um único contrato (`openai/<model>` / `openrouter/<provider>/<model>`) — trocar de gateway é configuração, não código |
+| **Busca web** | Tavily | Entrega conteúdo já extraído e otimizado para LLM (menos tokens, menos ruído) |
+| **Backend** | FastAPI + Pydantic v2 | Async nativo, validação de contrato (RFC 9457 para erros), Settings com `SecretStr`. Ver [ADR-0006](docs/adr/0006-backend.md) |
+| **Fila / worker** | SAQ (Redis) | Async de verdade, sem o `redis<6` do Arq nem o overhead síncrono do Celery. Ver [ADR-0014](docs/adr/0014-fila-saq.md) |
+| **Persistência** | PostgreSQL + Redis | Postgres para estado durável (execuções, roteiros, uso); Redis para cache e fila. Ver [ADR-0008](docs/adr/0008-persistencia.md) |
+| **Frontend** | Next.js 16 (App Router) + React 19 + TS | Substituiu o Streamlit: streaming SSE do "raciocínio" da IA, dark mode, i18n. Ver [ADR-0005](docs/adr/0005-frontend.md) |
+| **Mapas** | MapLibre GL JS | Roda 100% no cliente, sem chave de API de tiles (coerente com a política de zero dependência paga). Ver [ADR-0009](docs/adr/0009-mapas.md) |
+| **Geocoding** | Geoapify + cache Redis (30 dias) | 3.000 req/dia grátis; cache elimina chamadas repetidas. Ver [ADR-0010](docs/adr/0010-geocoding.md) |
+| **Observabilidade de LLM** | Langfuse Cloud | Prompt, resposta, tokens, custo e latência de cada chamada — 50k observações/mês grátis. Ver [ADR-0012](docs/adr/0012-observabilidade-llm.md) |
+| **DevOps** | Docker multi-stage non-root + GitHub Actions + uv | Build reproduzível, imagem enxuta, CI com gates de lint/tipagem/cobertura. Ver [ADR-0015](docs/adr/0015-hospedagem-heroku.md) |
+| **Documentação** | MkDocs Material + ADRs | Docs-as-code publicado pelo CI; decisões com trade-offs versionadas. Ver [ADR-0013](docs/adr/0013-documentacao-viva.md) |
+
+---
+
+## ✨ Funcionalidades
+
+- **Roteiro personalizado** — itinerário dia a dia (manhã/tarde/noite) a partir de destino, origem, duração e interesses.
+- **Refinamento iterativo** — ajuste o roteiro por instrução livre ("inclua mais museus") e navegue pelo histórico de versões com diff lado a lado.
+- **Rollback append-only** — reverta para qualquer versão anterior sem reescrever o histórico.
+- **Moeda e idioma parametrizáveis** — BRL/USD/EUR/GBP · pt-BR/en-US/es-ES; o roteiro sai integralmente na combinação escolhida (e a chave de cache inclui ambas).
+- **Pesquisa em tempo real** — agentes conectados à internet via Tavily.
+- **Mapa interativo** — pins geolocalizados de hotéis, restaurantes e atrações, com destaque sincronizado com o roteiro.
+- **Logs em tempo real (SSE)** — o "raciocínio" dos agentes transmitido ao vivo para a interface.
+- **Auditoria FinOps** — tokens reais, custo medido e economia comparada ao GPT-4o, por execução.
+- **Exportação** — download do roteiro em Markdown.
+
+---
+
+## 🔒 Segurança e confiabilidade
+
+- **Defesa contra prompt injection** — o roteiro é tratado como *dado não confiável* na extração de locais: texto delimitado com instrução explícita de ignorar comandos embutidos, saída validada contra schema Pydantic e teto de locais aplicado em código (não só no prompt).
+- **Segredos fora do código** — `SecretStr` do Pydantic em todas as chaves; validação de ambiente sem exibir segredos (`scripts/check_env.py`).
+- **Rate limiting** — proteção da demo pública por IP (autenticação é non-goal deliberado nesta fase).
+- **Imagem hardened** — usuário non-root, multi-stage build, superfície mínima.
+
+---
+
+## 💻 Como rodar
+
+### 1. Pré-requisitos (chaves de API)
 
 | Variável | Serviço | Free tier |
 | :--- | :--- | :--- |
@@ -115,37 +192,38 @@ Para o funcionamento pleno, você precisará de chaves para:
 O [guia de setup](docs/guides/setup.md) tem os links de cada serviço e a solução dos problemas mais comuns.
 
 ### 2. Instalação
-1.  **Clone o Repo:**
-    ```bash
-    git clone https://github.com/henriquebotelhogomes/agencia_viagens_ia
-    cd agencia_viagens_ia
-    ```
 
-2.  **Configure o .env:**
-    ```bash
-    cp .env.example .env    # PowerShell: Copy-Item .env.example .env
-    ```
-    Preencha as chaves e **valide tudo de uma vez**:
-    ```bash
-    uv run python -m scripts.check_env
-    ```
-    O script testa cada integração contra a API real — sem exibir segredos.
+```bash
+git clone https://github.com/henriquebotelhogomes/agencia_viagens_ia
+cd agencia_viagens_ia
 
-3.  **Rode com um comando:**
-    Sobe Postgres, Redis, API, worker e o frontend Next.js:
-    ```bash
-    docker compose up --build
-    ```
+cp .env.example .env          # PowerShell: Copy-Item .env.example .env
+uv run python -m scripts.check_env   # valida cada integração contra a API real
 
-A aplicação estará disponível em **[http://localhost:3000](http://localhost:3000)**
-(API em [http://localhost:8000/docs](http://localhost:8000/docs)).
+docker compose up --build     # sobe Postgres, Redis, API, worker e frontend
+```
+
+A aplicação fica em **[http://localhost:3000](http://localhost:3000)** (API em [http://localhost:8000/docs](http://localhost:8000/docs)).
 
 ### 3. Documentação local
 
 ```bash
 uv sync --group docs
-uv run mkdocs serve   # http://localhost:8000
+uv run mkdocs serve           # http://localhost:8000
 ```
 
 ---
-*Desenvolvido por **[Henrique Botelho Gomes](https://www.linkedin.com/in/henriquebotelhogomes/)** - Focado em Engenharia de IA e Sistemas Distribuídos.*
+
+## 📚 Documentação
+
+| Documento | Conteúdo |
+| :--- | :--- |
+| [**Documentação técnica**](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) | Arquitetura, C4, referência de API, runbook |
+| [**ADRs**](docs/adr/index.md) | 17 decisões arquiteturais com trade-offs |
+| [**PRD.md**](PRD.md) | Escopo, decisões de produto e roadmap |
+| [**specs/**](specs/README.md) | Especificações funcionais, técnicas e de UX |
+| [**CONTRIBUTING.md**](CONTRIBUTING.md) | Padrões de código e fluxo de PR |
+
+---
+
+*Desenvolvido por **[Henrique Botelho Gomes](https://www.linkedin.com/in/henriquebotelhogomes/)** — focado em Engenharia de IA e Sistemas Distribuídos.*
