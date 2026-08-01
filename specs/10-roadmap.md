@@ -51,7 +51,7 @@ operação.
 - **Resiliência**: circuit breaker por provider, retries com backoff, idempotência em
   `POST /executions`, cancelamento.
 - **Dashboards e alertas** baseados em SLO; runbook.
-- **Refinamento** de roteiro + **versionamento** (FR-40..41).
+- ~~**Refinamento** de roteiro + **versionamento** (FR-40..41).~~ ✅ Entregue (v1.26)
 - **Export PDF/.ics** + link público (FR-51..52).
 
 **Entregável demonstrável:** trace completo de uma geração + painel de custo + SLOs.

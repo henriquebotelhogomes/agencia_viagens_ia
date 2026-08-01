@@ -851,7 +851,28 @@ Controle de status das tarefas. Legenda: `[ ]` pendente · `[~]` em andamento ·
   (`streamlit`, `folium`, `streamlit-folium` + `langchain-groq`,
   `langchain-google-genai`, `google-generativeai`) e chaves legadas removidos
 
-### 15.4 Fase 3 — Excelência operacional
+### 15.4 Refinamento e versionamento (FR-40/FR-41)
+
+* [x] Modelos: `ExecutionKind` (initial/refine/rollback), `parent_execution_id`,
+  `root_execution_id`, `refine_instruction` + migration Alembic
+
+* [x] Worker: `_run_refine` (crew completa com contexto, sem cache) e
+  `_run_rollback` (cópia append-only, sem LLM/geocoding); `_next_version`
+
+* [x] API: `POST /refine`, `POST /rollback`, `GET /versions`;
+  `ExecutionDetail` estendido com campos de linhagem
+
+* [x] Frontend: `refine-panel.tsx`, `version-history.tsx`, `version-diff.tsx`
+  (jsdiff); `api.refine/rollback/getVersions`
+
+* [x] Testes: backend pytest (cov ≥ 90), frontend Vitest 98 (cov ≥ 90),
+  E2E opt-in `refine.spec.ts`
+
+* [x] Docs: ADR-0017, specs 02/03/09/10 atualizados
+
+* [ ] Deploy em produção (Docker Desktop pendente)
+
+### 15.5 Fase 3 — Excelência operacional
 
 * [ ] LLM evals no CI (promptfoo/deepeval)
 
@@ -865,7 +886,7 @@ Controle de status das tarefas. Legenda: `[ ]` pendente · `[~]` em andamento ·
 
 * [ ] README com diagramas C4, ADRs e badges
 
-### 15.5 Qualidade e documentação (transversal — §8.5/§8.6/D13)
+### 15.6 Qualidade e documentação (transversal — §8.5/§8.6/D13)
 
 **Gates de qualidade**
 

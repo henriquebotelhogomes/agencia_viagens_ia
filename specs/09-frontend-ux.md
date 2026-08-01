@@ -87,9 +87,13 @@
 > direto no cliente, com bloco de proveniência no cabeçalho. PDF/.ics,
 > compartilhar e refinar seguem no backlog (Q5).
 
-### 5.5 Refinamento
-- Caixa de instrução ("mais barato", "menos caminhada") → gera **nova versão**.
+### 5.5 Refinamento ✅
+- Caixa de instrução (“mais barato”, “menos caminhada”) → gera **nova versão**.
 - **Comparação de versões** (diff visual) e histórico.
+
+> **Entregue** (v1.26): `refine-panel.tsx` (textarea + Zod 1–1000),
+> `version-history.tsx` (badges por kind, link “Ver”, rollback),
+> `version-diff.tsx` (jsdiff, linhas verde/vermelho).
 
 ### 5.6 Painel FinOps (admin)
 - Gráficos de custo por dia/modelo/tenant, **cache hit ratio**, economia vs. GPT-4o.

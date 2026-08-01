@@ -75,10 +75,14 @@ Voyager AI
 - **FR-32** O sistema DEVE renderizar um **mapa interativo** com os locais geolocalizados.
 - **FR-33** O sistema DEVE expor um **painel de raciocínio** opcional (transparência).
 
-### 2.5 Refinamento
-- **FR-40** O usuário DEVERIA poder **refinar** o roteiro via instruções ("mais barato",
-  "menos caminhada", "troque o dia 3 por praias") gerando uma **nova versão**.
+### 2.5 Refinamento ✅
+- **FR-40** O usuário DEVERIA poder **refinar** o roteiro via instruções (“mais barato”,
+  “menos caminhada”, “troque o dia 3 por praias”) gerando uma **nova versão**.
 - **FR-41** O sistema DEVE manter **versões** e permitir comparar/voltar.
+
+> **Entregue** (v1.26): refine reexecuta a crew completa com contexto; versionamento
+> com linhagem (root/parent), rollback append-only, diff client-side (jsdiff).
+> Ver [ADR-0017](../docs/adr/0017-versionamento-roteiro.md).
 
 ### 2.6 Biblioteca, export e compartilhamento
 - **FR-50** Roteiros DEVEM ser **salvos** automaticamente e listados na biblioteca do workspace.
