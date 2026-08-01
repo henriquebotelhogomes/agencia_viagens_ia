@@ -38,6 +38,18 @@ IAs genéricas **alucinam** sobre horários, preços e locais que já fecharam. 
 
 ---
 
+## 🖼️ O sistema em ação
+
+**Briefing** — o usuário informa origem, destino, dias, moeda, idioma e interesses; os chips aceleram o preenchimento.
+
+![Homepage da Voyager com o formulário de briefing](screenshots/01-frontend-homepage.png)
+
+**Execução concluída** — roteiro em Markdown, tabela de custos, painel FinOps (tokens reais + economia vs GPT-4o), mapa com os pontos geolocalizados e painel de refinamento.
+
+![Página de execução com roteiro, mapa e painel FinOps](screenshots/02-frontend-execucao.png)
+
+---
+
 ## 🏗️ Arquitetura
 
 O sistema segue sete princípios: **API-first** (a interface não conhece CrewAI), **assíncrono por padrão** (gerar roteiro é um job, não um request), **12-Factor**, **provider-agnostic de LLM**, **observability-first**, **custo como requisito** e **degradação graciosa** (a falta de um serviço opcional nunca derruba o fluxo).
@@ -131,6 +143,16 @@ flowchart TD
 - **Modelos diferentes para tarefas diferentes.** Pesquisa e extração são tarefas baratas (`fast`); logística exige *function calling* confiável para usar o Tavily (`fast-tools`); a redação final precisa de qualidade consistente (`pro`). Pagar preço de modelo frontier para listar atrações seria desperdício.
 - **Failover na camada de aplicação, não do litellm.** O CrewAI 1.x usa providers nativos para prefixos como `openai/`, que não aceitam o parâmetro `fallbacks` do litellm. O retry é explícito no `CrewBuilder.run()` — o ponto de decisão é nosso, testável sem rede.
 - **Refinamento com linhagem de versões.** Um roteiro pode ser refinado por instrução ("troque o hotel por um mais central") ou revertido para qualquer versão anterior — sem reescrever histórico (append-only). Ver [ADR-0017](docs/adr/0017-versionamento-roteiro.md).
+
+---
+
+## 🔭 Observabilidade e documentação viva
+
+**[Langfuse](https://langfuse.com)** — plataforma open-source de observabilidade de LLM. Usamos para rastrear **cada chamada de modelo**: prompt, resposta, tokens, custo e latência, agrupados por execução. É o que transforma "quanto custa esse roteiro?" em uma métrica real, não um chute — e permite detectar regressões de qualidade ou de custo entre versões. Ver [ADR-0012](docs/adr/0012-observabilidade-llm.md).
+
+**[MkDocs Material](https://squidfunk.github.io/mkdocs-material/)** — documentação como código, versionada junto com o `src/` e publicada automaticamente pelo CI a cada merge. A referência de API é gerada dos docstrings (via mkdocstrings) e o build roda com `--strict`: link quebrado reprova o pipeline. Ver [ADR-0013](docs/adr/0013-documentacao-viva.md).
+
+![Documentação técnica gerada com MkDocs Material](screenshots/03-mkdocs-documentacao.png)
 
 ---
 

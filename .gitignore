@@ -59,6 +59,7 @@ logs/
 *.png
 *.jpg
 !docs/**/*.png
+!screenshots/**/*.png
 
 # Streamlit
 .streamlit/
