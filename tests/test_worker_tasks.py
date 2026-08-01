@@ -2,6 +2,7 @@
 
 O CrewAI, o geocoding e o cache são substituídos: o objetivo é validar a máquina
 de estados da execução, a persistência do resultado e o registro de custo real.
+Inclui testes dos caminhos de refine (FR-40) e rollback (FR-41).
 """
 
 import uuid
@@ -12,7 +13,13 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.db.base import Base
-from src.db.models import Execution, ExecutionStatus, Itinerary, UsageRecord
+from src.db.models import (
+    Execution,
+    ExecutionKind,
+    ExecutionStatus,
+    Itinerary,
+    UsageRecord,
+)
 from src.models.location import Location
 from src.worker import tasks
 
@@ -275,3 +282,226 @@ async def test_find_stale_executions_lists_running(mocker, session_factory) -> N
     stale = await tasks.find_stale_executions()
 
     assert stale == [running_id]
+
+
+# ---------------------------------------------------------------------------
+# Caminho de refine (FR-40)
+# ---------------------------------------------------------------------------
+
+
+async def test_refine_runs_crew_with_context_and_increments_version(
+    mocker, session_factory, worker_env
+) -> None:
+    """Refine executa a crew com contexto e salva versão incrementada."""
+    # Cria a execução pai com roteiro
+    parent_id = await _create_execution(
+        session_factory, status=ExecutionStatus.SUCCEEDED
+    )
+    async with session_factory() as session:
+        session.add(
+            Itinerary(
+                execution_id=parent_id,
+                content_markdown="# Roteiro V1",
+                version=1,
+            )
+        )
+        await session.commit()
+
+    # Cria a execução filha (refine)
+    child_id = await _create_execution(
+        session_factory,
+        status=ExecutionStatus.QUEUED,
+        kind=ExecutionKind.REFINE,
+        parent_execution_id=parent_id,
+        root_execution_id=parent_id,
+        refine_instruction="Inclua mais museus",
+    )
+
+    _mock_crew(mocker, FakeCrewOutput("# Roteiro V2 com museus"))
+    _mock_geocoding(mocker, [])
+
+    result = await tasks.generate_itinerary({}, execution_id=str(child_id))
+
+    assert result == ExecutionStatus.SUCCEEDED.value
+    async with session_factory() as session:
+        execution = await session.get(Execution, child_id)
+        assert execution is not None
+        assert execution.status == ExecutionStatus.SUCCEEDED
+
+        from sqlalchemy import select as sa_select
+
+        itin_obj = await session.scalar(
+            sa_select(Itinerary).where(Itinerary.execution_id == child_id)
+        )
+        assert itin_obj is not None
+        assert itin_obj.version == 2
+        assert "museus" in itin_obj.content_markdown
+
+
+async def test_refine_passes_context_to_crew_builder(
+    mocker, session_factory, worker_env
+) -> None:
+    """O CrewBuilder recebe refine_instruction e previous_itinerary."""
+    parent_id = await _create_execution(
+        session_factory, status=ExecutionStatus.SUCCEEDED
+    )
+    async with session_factory() as session:
+        session.add(
+            Itinerary(
+                execution_id=parent_id,
+                content_markdown="# Roteiro original",
+                version=1,
+            )
+        )
+        await session.commit()
+
+    child_id = await _create_execution(
+        session_factory,
+        status=ExecutionStatus.QUEUED,
+        kind=ExecutionKind.REFINE,
+        parent_execution_id=parent_id,
+        root_execution_id=parent_id,
+        refine_instruction="Troque o hotel",
+    )
+
+    mock_builder_class = mocker.patch("src.worker.tasks.CrewBuilder")
+    mock_builder = mock_builder_class.return_value
+    mock_builder.run.return_value = FakeCrewOutput("# V2")
+    mock_builder.use_fallback = False
+    _mock_geocoding(mocker, [])
+
+    await tasks.generate_itinerary({}, execution_id=str(child_id))
+
+    call_kwargs = mock_builder_class.call_args[1]
+    assert call_kwargs["refine_instruction"] == "Troque o hotel"
+    assert call_kwargs["previous_itinerary"] == "# Roteiro original"
+
+
+# ---------------------------------------------------------------------------
+# Caminho de rollback (FR-41)
+# ---------------------------------------------------------------------------
+
+
+async def test_rollback_copies_content_without_llm(
+    mocker, session_factory, worker_env
+) -> None:
+    """Rollback copia o conteúdo do alvo sem chamar LLM."""
+    target_id = await _create_execution(
+        session_factory, status=ExecutionStatus.SUCCEEDED
+    )
+    async with session_factory() as session:
+        session.add(
+            Itinerary(
+                execution_id=target_id,
+                content_markdown="# Roteiro V1",
+                locations_geojson={"type": "FeatureCollection", "features": []},
+                version=1,
+            )
+        )
+        await session.commit()
+
+    rollback_id = await _create_execution(
+        session_factory,
+        status=ExecutionStatus.QUEUED,
+        kind=ExecutionKind.ROLLBACK,
+        parent_execution_id=target_id,
+        root_execution_id=target_id,
+        refine_instruction="Restaurada a versão 1",
+    )
+
+    crew = mocker.patch("src.worker.tasks.CrewBuilder")
+
+    result = await tasks.generate_itinerary({}, execution_id=str(rollback_id))
+
+    assert result == ExecutionStatus.SUCCEEDED.value
+    crew.assert_not_called()
+
+    async with session_factory() as session:
+        execution = await session.get(Execution, rollback_id)
+        assert execution is not None
+        assert execution.status == ExecutionStatus.SUCCEEDED
+
+        from sqlalchemy import select as sa_select
+
+        itin_obj = await session.scalar(
+            sa_select(Itinerary).where(Itinerary.execution_id == rollback_id)
+        )
+        assert itin_obj is not None
+        assert itin_obj.content_markdown == "# Roteiro V1"
+        assert itin_obj.version == 2
+
+        # Sem registro de uso (sem LLM)
+        usage = list(await session.scalars(UsageRecord.__table__.select()))
+        assert usage == []
+
+
+async def test_rollback_fails_when_target_has_no_itinerary(
+    mocker, session_factory, worker_env
+) -> None:
+    """Rollback cujo alvo não tem roteiro marca a execução como failed."""
+    target_id = await _create_execution(
+        session_factory, status=ExecutionStatus.SUCCEEDED
+    )
+    rollback_id = await _create_execution(
+        session_factory,
+        status=ExecutionStatus.QUEUED,
+        kind=ExecutionKind.ROLLBACK,
+        parent_execution_id=target_id,
+        root_execution_id=target_id,
+    )
+
+    result = await tasks.generate_itinerary({}, execution_id=str(rollback_id))
+
+    assert result == ExecutionStatus.FAILED.value
+    async with session_factory() as session:
+        execution = await session.get(Execution, rollback_id)
+        assert execution is not None
+        assert execution.status == ExecutionStatus.FAILED
+        assert "não possui roteiro" in (execution.error_message or "")
+
+
+# ---------------------------------------------------------------------------
+# _next_version
+# ---------------------------------------------------------------------------
+
+
+async def test_next_version_increments_from_lineage(
+    mocker, session_factory, worker_env
+) -> None:
+    """_next_version retorna max(versão da linhagem) + 1."""
+    root_id = await _create_execution(
+        session_factory, status=ExecutionStatus.SUCCEEDED
+    )
+    async with session_factory() as session:
+        session.add(
+            Itinerary(execution_id=root_id, content_markdown="# V1", version=1)
+        )
+        await session.commit()
+
+    child_id = await _create_execution(
+        session_factory,
+        status=ExecutionStatus.SUCCEEDED,
+        kind=ExecutionKind.REFINE,
+        parent_execution_id=root_id,
+        root_execution_id=root_id,
+    )
+    async with session_factory() as session:
+        session.add(
+            Itinerary(execution_id=child_id, content_markdown="# V2", version=2)
+        )
+        await session.commit()
+
+    # Cria uma nova execução para testar _next_version
+    new_id = await _create_execution(
+        session_factory,
+        status=ExecutionStatus.QUEUED,
+        kind=ExecutionKind.REFINE,
+        parent_execution_id=child_id,
+        root_execution_id=root_id,
+    )
+
+    async with session_factory() as session:
+        execution = await session.get(Execution, new_id)
+        version = await tasks._next_version(session, execution)
+
+    assert version == 3

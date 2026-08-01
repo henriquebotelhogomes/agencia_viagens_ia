@@ -46,6 +46,14 @@ class ExecutionStatus(enum.StrEnum):
     CANCELLED = "cancelled"
 
 
+class ExecutionKind(enum.StrEnum):
+    """Tipo de execução na linhagem de versões (FR-40/FR-41)."""
+
+    INITIAL = "initial"
+    REFINE = "refine"
+    ROLLBACK = "rollback"
+
+
 class Execution(Base):
     """Uma rodada de orquestração da equipe de agentes."""
 
@@ -83,6 +91,26 @@ class Execution(Base):
     served_from_cache: Mapped[bool] = mapped_column(default=False)
     duration_seconds: Mapped[float | None] = mapped_column(Float, default=None)
 
+    # --- Versionamento / linhagem (FR-40/FR-41) ---
+    kind: Mapped[ExecutionKind] = mapped_column(
+        Enum(ExecutionKind, name="execution_kind", native_enum=False),
+        default=ExecutionKind.INITIAL,
+        server_default=ExecutionKind.INITIAL.value,
+    )
+    parent_execution_id: Mapped[uuid.UUID | None] = mapped_column(
+        UuidType,
+        ForeignKey("executions.id", ondelete="SET NULL"),
+        index=True,
+        default=None,
+    )
+    root_execution_id: Mapped[uuid.UUID | None] = mapped_column(
+        UuidType,
+        ForeignKey("executions.id", ondelete="SET NULL"),
+        index=True,
+        default=None,
+    )
+    refine_instruction: Mapped[str | None] = mapped_column(Text, default=None)
+
     # --- Auditoria ---
     client_ip_hash: Mapped[str | None] = mapped_column(String(64), default=None)
     created_at: Mapped[datetime] = mapped_column(
@@ -100,6 +128,18 @@ class Execution(Base):
     )
     usage_records: Mapped[list["UsageRecord"]] = relationship(
         back_populates="execution", cascade="all, delete-orphan"
+    )
+    # Linhagem self-referencial (conveniência ORM)
+    parent: Mapped["Execution | None"] = relationship(
+        "Execution",
+        remote_side="Execution.id",
+        foreign_keys=[parent_execution_id],
+        back_populates="children",
+    )
+    children: Mapped[list["Execution"]] = relationship(
+        "Execution",
+        foreign_keys="Execution.parent_execution_id",
+        back_populates="parent",
     )
 
     __table_args__ = (

@@ -1,11 +1,11 @@
-"""Rotas de execução de roteiros (FR-02, FR-03, FR-04, FR-05, FR-07)."""
+"""Rotas de execução de roteiros (FR-02, FR-03, FR-04, FR-05, FR-07, FR-40, FR-41)."""
 
 import uuid
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Header, Request, Response, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
@@ -17,16 +17,31 @@ from src.api.deps import (
     SessionDep,
     SettingsDep,
 )
-from src.api.errors import ExecutionNotFound, RateLimitExceeded, ServiceUnavailable
+from src.api.errors import (
+    ExecutionNotFound,
+    ProblemDetail,
+    RateLimitExceeded,
+    ServiceUnavailable,
+)
 from src.api.schemas import (
     CostSummary,
     ExecutionCreated,
     ExecutionDetail,
     GeoJSONFeatureCollection,
     ProgressEvent,
+    RefineRequest,
+    RollbackRequest,
     TripBriefing,
+    VersionList,
+    VersionSummary,
 )
-from src.db.models import Execution, ExecutionStatus, Itinerary, UsageRecord
+from src.db.models import (
+    Execution,
+    ExecutionKind,
+    ExecutionStatus,
+    Itinerary,
+    UsageRecord,
+)
 from src.services.progress_bus import HEARTBEAT_SECONDS, ProgressBus
 from src.services.queue_service import enqueue_generation
 
@@ -206,6 +221,215 @@ async def cancel_execution(execution_id: uuid.UUID, session: SessionDep) -> Resp
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+@router.post(
+    "/{execution_id}/refine",
+    response_model=ExecutionCreated,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Refina um roteiro existente (FR-40)",
+    responses={
+        404: {"description": "Execução não encontrada"},
+        409: {"description": "Execução sem roteiro concluído"},
+        422: {"description": "Instrução inválida"},
+        429: {"description": "Limite de execuções por hora excedido"},
+    },
+)
+async def refine_execution(
+    execution_id: uuid.UUID,
+    body: RefineRequest,
+    request: Request,
+    session: SessionDep,
+    settings: SettingsDep,
+    rate_limiter: RateLimiterDep,
+    client_ip_hash: ClientIpHashDep,
+) -> ExecutionCreated:
+    """Cria uma nova versão do roteiro aplicando a instrução do usuário.
+
+    Reexecuta a crew completa com o roteiro anterior + instrução como contexto.
+    """
+    if not settings.database_enabled:
+        raise ServiceUnavailable("database")
+    if not settings.cache_enabled:
+        raise ServiceUnavailable("queue")
+
+    parent = await _load_execution(session, execution_id)
+
+    # Valida: pai deve estar succeeded e ter roteiro
+    if parent.status != ExecutionStatus.SUCCEEDED:
+        raise ProblemDetail(
+            status_code=status.HTTP_409_CONFLICT,
+            title="Execução não concluída",
+            detail="Só é possível refinar uma execução com roteiro concluído.",
+            problem_type="execution-not-succeeded",
+        )
+    parent_itinerary = await session.scalar(
+        select(Itinerary).where(Itinerary.execution_id == parent.id)
+    )
+    if parent_itinerary is None:
+        raise ProblemDetail(
+            status_code=status.HTTP_409_CONFLICT,
+            title="Execução sem roteiro",
+            detail="A execução não possui roteiro para refinar.",
+            problem_type="no-itinerary",
+        )
+
+    limit_result = await rate_limiter.check(client_ip_hash)
+    if not limit_result.allowed:
+        raise RateLimitExceeded(
+            limit=limit_result.limit,
+            retry_after_seconds=limit_result.retry_after_seconds,
+        )
+
+    root_id = parent.root_execution_id or parent.id
+    child = Execution(
+        origem=parent.origem,
+        destino=parent.destino,
+        dias=parent.dias,
+        interesses=parent.interesses,
+        moeda=parent.moeda,
+        idioma=parent.idioma,
+        briefing_hash=parent.briefing_hash,
+        client_ip_hash=client_ip_hash,
+        status=ExecutionStatus.QUEUED,
+        kind=ExecutionKind.REFINE,
+        parent_execution_id=parent.id,
+        root_execution_id=root_id,
+        refine_instruction=body.instruction,
+    )
+    session.add(child)
+    await session.commit()
+    await session.refresh(child)
+
+    await enqueue_generation(child.id)
+    return _created_response(child, request)
+
+
+@router.post(
+    "/{execution_id}/rollback",
+    response_model=ExecutionCreated,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Restaura uma versão anterior (FR-41)",
+    responses={
+        404: {"description": "Execução não encontrada"},
+        409: {"description": "Execução alvo sem roteiro"},
+        422: {"description": "Requisição inválida"},
+    },
+)
+async def rollback_execution(
+    execution_id: uuid.UUID,
+    body: RollbackRequest,
+    request: Request,
+    session: SessionDep,
+    settings: SettingsDep,
+) -> ExecutionCreated:
+    """Cria uma nova versão copiando o conteúdo da versão alvo (sem LLM)."""
+    if not settings.database_enabled:
+        raise ServiceUnavailable("database")
+    if not settings.cache_enabled:
+        raise ServiceUnavailable("queue")
+
+    current = await _load_execution(session, execution_id)
+    target = await _load_execution(session, body.target_execution_id)
+
+    # Valida: alvo deve ter roteiro
+    target_itinerary = await session.scalar(
+        select(Itinerary).where(Itinerary.execution_id == target.id)
+    )
+    if target_itinerary is None:
+        raise ProblemDetail(
+            status_code=status.HTTP_409_CONFLICT,
+            title="Alvo sem roteiro",
+            detail="A execução alvo não possui roteiro para restaurar.",
+            problem_type="no-itinerary",
+        )
+
+    root_id = current.root_execution_id or current.id
+    target_version = target_itinerary.version
+    child = Execution(
+        origem=current.origem,
+        destino=current.destino,
+        dias=current.dias,
+        interesses=current.interesses,
+        moeda=current.moeda,
+        idioma=current.idioma,
+        briefing_hash=current.briefing_hash,
+        client_ip_hash=current.client_ip_hash,
+        status=ExecutionStatus.QUEUED,
+        kind=ExecutionKind.ROLLBACK,
+        parent_execution_id=target.id,
+        root_execution_id=root_id,
+        refine_instruction=f"Restaurada a versão {target_version}",
+    )
+    session.add(child)
+    await session.commit()
+    await session.refresh(child)
+
+    await enqueue_generation(child.id)
+    return _created_response(child, request)
+
+
+@router.get(
+    "/{execution_id}/versions",
+    response_model=VersionList,
+    summary="Lista as versões da linhagem (FR-41)",
+    responses={404: {"description": "Execução não encontrada"}},
+)
+async def list_versions(
+    execution_id: uuid.UUID, session: SessionDep
+) -> VersionList:
+    """Retorna todas as versões da linhagem, ordenadas por número de versão."""
+    execution = await _load_execution(session, execution_id)
+    root_id = execution.root_execution_id or execution.id
+
+    # Busca todas as execuções da linhagem
+    lineage_executions = list(
+        await session.scalars(
+            select(Execution).where(
+                or_(
+                    Execution.id == root_id,
+                    Execution.root_execution_id == root_id,
+                )
+            )
+        )
+    )
+
+    # Busca os itinerários para obter as versões
+    lineage_ids = [e.id for e in lineage_executions]
+    itineraries = list(
+        await session.scalars(
+            select(Itinerary).where(Itinerary.execution_id.in_(lineage_ids))
+        )
+    )
+    itin_by_exec = {it.execution_id: it for it in itineraries}
+
+    exec_by_id = {e.id: e for e in lineage_executions}
+    versions: list[VersionSummary] = []
+    for itin in itineraries:
+        exec_obj = exec_by_id.get(itin.execution_id)
+        if exec_obj is None:
+            continue
+        versions.append(
+            VersionSummary(
+                id=exec_obj.id,
+                version=itin.version,
+                kind=exec_obj.kind,
+                refine_instruction=exec_obj.refine_instruction,
+                status=exec_obj.status,
+                created_at=exec_obj.created_at,
+                duration_seconds=exec_obj.duration_seconds,
+            )
+        )
+
+    versions.sort(key=lambda v: v.version)
+    current_itin = itin_by_exec.get(execution.id)
+    current_version = current_itin.version if current_itin else 1
+
+    return VersionList(
+        root_execution_id=root_id,
+        current_version=current_version,
+        versions=versions,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Auxiliares
 # ---------------------------------------------------------------------------
@@ -255,6 +479,11 @@ async def _to_detail(session: AsyncSession, execution: Execution) -> ExecutionDe
         cost=_summarize_cost(usage, execution.served_from_cache),
         created_at=execution.created_at,
         finished_at=execution.finished_at,
+        kind=execution.kind,
+        version=itinerary.version if itinerary else None,
+        parent_execution_id=execution.parent_execution_id,
+        root_execution_id=execution.root_execution_id,
+        refine_instruction=execution.refine_instruction,
     )
 
 

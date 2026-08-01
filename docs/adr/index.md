@@ -31,6 +31,7 @@ quando o contexto muda.
 | [0014](0014-fila-saq.md) | Fila async | Aceita | SAQ (supersede ADR-0007) |
 | [0015](0015-hospedagem-heroku.md) | Hospedagem | Aceita | Heroku com crédito Student (supersede ADR-0003) |
 | [0016](0016-i18n.md) | Internacionalização | Aceita | Conteúdo i18n; interface somente em português |
+| [0017](0017-versionamento-roteiro.md) | Versionamento de roteiro | Aceita | Linhagem root/parent, rollback append-only, diff client-side |
 
 ## Formato
 

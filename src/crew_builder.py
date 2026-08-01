@@ -30,6 +30,8 @@ class CrewBuilder:
         moeda: str = DEFAULT_CURRENCY,
         idioma: str = DEFAULT_LANGUAGE,
         use_fallback: bool = False,
+        refine_instruction: str | None = None,
+        previous_itinerary: str | None = None,
     ) -> None:
         self.settings = settings
         self.destino = destino
@@ -39,8 +41,19 @@ class CrewBuilder:
         self.moeda = moeda
         self.idioma = idioma
         self.use_fallback = use_fallback
+        self.refine_instruction = refine_instruction
+        self.previous_itinerary = previous_itinerary
         self.agents_factory = TravelAgents(settings, use_fallback=use_fallback)
         self.tasks_factory = TravelTasks()
+        # Bloco de contexto injetado nas tasks quando é um refine
+        self._refine_context: str | None = None
+        if refine_instruction and previous_itinerary:
+            self._refine_context = (
+                "CONTEXTO DE REFINAMENTO:\n"
+                f"Roteiro atual:\n{previous_itinerary}\n\n"
+                f"Instrução do usuário: {refine_instruction}\n"
+                "Aplique a instrução mantendo o que funciona no roteiro."
+            )
 
     def create_local_expert_agent(self) -> Agent:
         """Factory method para o agente Guia Local."""
@@ -57,7 +70,8 @@ class CrewBuilder:
     def create_research_task(self, agent: Agent, destino: str, interesses: str) -> Task:
         """Cria a tarefa de pesquisa."""
         return self.tasks_factory.research_destination(
-            agent, destino, interesses, idioma=self.idioma
+            agent, destino, interesses, idioma=self.idioma,
+            refine_context=self._refine_context,
         )
 
     def create_logistics_task(
@@ -65,7 +79,8 @@ class CrewBuilder:
     ) -> Task:
         """Cria a tarefa de logística."""
         return self.tasks_factory.calculate_logistics(
-            agent, destino, dias, origem, moeda=self.moeda, idioma=self.idioma
+            agent, destino, dias, origem, moeda=self.moeda, idioma=self.idioma,
+            refine_context=self._refine_context,
         )
 
     def create_itinerary_task(
@@ -73,7 +88,8 @@ class CrewBuilder:
     ) -> Task:
         """Cria a tarefa de roteiro."""
         return self.tasks_factory.compile_itinerary(
-            agent, destino, dias, interesses, moeda=self.moeda, idioma=self.idioma
+            agent, destino, dias, interesses, moeda=self.moeda, idioma=self.idioma,
+            refine_context=self._refine_context,
         )
 
     def build_crew(
@@ -136,5 +152,7 @@ class CrewBuilder:
                 moeda=self.moeda,
                 idioma=self.idioma,
                 use_fallback=True,
+                refine_instruction=self.refine_instruction,
+                previous_itinerary=self.previous_itinerary,
             )
             return fallback_builder.run()

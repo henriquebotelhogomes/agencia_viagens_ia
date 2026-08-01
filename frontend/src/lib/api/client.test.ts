@@ -147,4 +147,45 @@ describe("api client", () => {
 
     expect(fetchMock.mock.calls[0][0]).toContain("days=7");
   });
+
+  it("envia instrução no refine e retorna a execução criada", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ id: "child-1", status: "queued", stream_url: "/s" }),
+    );
+
+    const result = await api.refine("exec-1", "mais museus");
+
+    expect(result.id).toBe("child-1");
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toContain("/v1/executions/exec-1/refine");
+    expect(JSON.parse(init.body)).toEqual({ instruction: "mais museus" });
+  });
+
+  it("envia target_execution_id no rollback", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ id: "child-2", status: "queued", stream_url: "/s" }),
+    );
+
+    const result = await api.rollback("exec-1", "target-99");
+
+    expect(result.id).toBe("child-2");
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toContain("/v1/executions/exec-1/rollback");
+    expect(JSON.parse(init.body)).toEqual({ target_execution_id: "target-99" });
+  });
+
+  it("busca a lista de versões", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        root_execution_id: "root-1",
+        current_version: 2,
+        versions: [],
+      }),
+    );
+
+    const result = await api.getVersions("exec-1");
+
+    expect(result.root_execution_id).toBe("root-1");
+    expect(fetchMock.mock.calls[0][0]).toContain("/v1/executions/exec-1/versions");
+  });
 });

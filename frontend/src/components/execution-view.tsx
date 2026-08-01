@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, ArrowLeft, Download, MapPin, Timer } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -10,6 +11,8 @@ import remarkGfm from "remark-gfm";
 import { AgentTimeline, StatusBadge } from "@/components/agent-timeline";
 import { CostPanel } from "@/components/cost-panel";
 import { ItineraryMap } from "@/components/itinerary-map";
+import { RefinePanel } from "@/components/refine-panel";
+import { VersionHistory } from "@/components/version-history";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, Skeleton } from "@/components/ui/card";
 import { api } from "@/lib/api/client";
@@ -24,6 +27,7 @@ interface ExecutionViewProps {
 }
 
 export function ExecutionView({ executionId, initial }: ExecutionViewProps) {
+  const router = useRouter();
   const { events, status, latest, streamError } = useExecutionStream(
     executionId,
     initial.status,
@@ -51,6 +55,16 @@ export function ExecutionView({ executionId, initial }: ExecutionViewProps) {
   });
 
   const [highlighted, setHighlighted] = useState<string>();
+
+  /** Rollback: cria nova versão e navega para ela. */
+  const handleRollback = async (targetExecutionId: string) => {
+    try {
+      const created = await api.rollback(executionId, targetExecutionId);
+      router.push(`/executions/${created.id}`);
+    } catch {
+      // Erro é silencioso aqui; o VersionHistory mostra o estado
+    }
+  };
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
@@ -151,6 +165,17 @@ export function ExecutionView({ executionId, initial }: ExecutionViewProps) {
                 </ul>
               </CardContent>
             </Card>
+          ) : null}
+
+          {status === "succeeded" && execution.itinerary_markdown ? (
+            <>
+              <RefinePanel executionId={executionId} />
+              <VersionHistory
+                executionId={executionId}
+                currentVersion={execution.version ?? 1}
+                onRollback={handleRollback}
+              />
+            </>
           ) : null}
         </aside>
 

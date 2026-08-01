@@ -21,13 +21,17 @@ class TravelTasks:
         destino: str,
         interesses: str,
         idioma: str = DEFAULT_LANGUAGE,
+        refine_context: str | None = None,
     ) -> Task:
+        description = (
+            f"Pesquise {destino}. Interesses: {interesses}. "
+            f"Liste até 5 atrações e 3 restaurantes com descrição de 1 linha "
+            f"cada. Escreva a resposta em {language_name(idioma)}."
+        )
+        if refine_context:
+            description += f"\n\n{refine_context}"
         return Task(
-            description=(
-                f"Pesquise {destino}. Interesses: {interesses}. "
-                f"Liste até 5 atrações e 3 restaurantes com descrição de 1 linha "
-                f"cada. Escreva a resposta em {language_name(idioma)}."
-            ),
+            description=description,
             expected_output=(
                 "Lista com 5 atrações e 3 restaurantes. Máximo 200 palavras. "
                 f"Idioma: {language_name(idioma)}."
@@ -43,19 +47,23 @@ class TravelTasks:
         origem: str,
         moeda: str = DEFAULT_CURRENCY,
         idioma: str = DEFAULT_LANGUAGE,
+        refine_context: str | None = None,
     ) -> Task:
         moeda_txt = currency_label(moeda)
+        description = (
+            f"Para {dias} dias em {destino}, calcule custos detalhados: "
+            f"1. VOO: Nome de uma companhia que opere o trecho "
+            f"{origem}->{destino}. "
+            f"2. HOTEL: Nome de um hotel (+ estrelas) em {destino}. "
+            f"3. ALIMENTAÇÃO: Detalhe o que compõe o gasto diário "
+            "(café/almoço/jantar). "
+            f"Converta e exiba TODOS os valores em {moeda_txt}. "
+            f"Escreva a resposta em {language_name(idioma)}."
+        )
+        if refine_context:
+            description += f"\n\n{refine_context}"
         return Task(
-            description=(
-                f"Para {dias} dias em {destino}, calcule custos detalhados: "
-                f"1. VOO: Nome de uma companhia que opere o trecho "
-                f"{origem}->{destino}. "
-                f"2. HOTEL: Nome de um hotel (+ estrelas) em {destino}. "
-                f"3. ALIMENTAÇÃO: Detalhe o que compõe o gasto diário "
-                "(café/almoço/jantar). "
-                f"Converta e exiba TODOS os valores em {moeda_txt}. "
-                f"Escreva a resposta em {language_name(idioma)}."
-            ),
+            description=description,
             expected_output=(
                 f"Tabela em {moeda_txt} com: Companhia Aérea, Nome do Hotel e "
                 "estrelas, Detalhe da Alimentação/dia, TARIFA por item e TOTAL "
@@ -72,15 +80,19 @@ class TravelTasks:
         interesses: str,
         moeda: str = DEFAULT_CURRENCY,
         idioma: str = DEFAULT_LANGUAGE,
+        refine_context: str | None = None,
     ) -> Task:
         moeda_txt = currency_label(moeda)
+        description = (
+            f"Crie roteiro de {dias} dias em {destino} com foco em: "
+            f"{interesses}. Use EXATAMENTE a tabela de custos detalhada "
+            f"em {moeda_txt} gerada pelo colega logístico. "
+            f"Escreva TODO o roteiro em {language_name(idioma)}."
+        )
+        if refine_context:
+            description += f"\n\n{refine_context}"
         return Task(
-            description=(
-                f"Crie roteiro de {dias} dias em {destino} com foco em: "
-                f"{interesses}. Use EXATAMENTE a tabela de custos detalhada "
-                f"em {moeda_txt} gerada pelo colega logístico. "
-                f"Escreva TODO o roteiro em {language_name(idioma)}."
-            ),
+            description=description,
             expected_output=(
                 "Roteiro Markdown completo com: Título atrativo, Tabela de "
                 f"Custos Detalhada em {moeda_txt}, Cronograma de {dias} dias "

@@ -14,6 +14,7 @@ import {
   type LocalizationOptions,
   type ProblemDetail,
   type TripBriefing,
+  type VersionList,
   executionCreatedSchema,
   executionDetailSchema,
   finOpsSummarySchema,
@@ -21,6 +22,7 @@ import {
   healthSchema,
   localizationOptionsSchema,
   problemDetailSchema,
+  versionListSchema,
 } from "./types";
 
 /** Base da API. Em produção vem do ambiente; em dev, o padrão local. */
@@ -140,6 +142,34 @@ export const api = {
     request<FinOpsSummary>(`/v1/finops?days=${days}`, finOpsSummarySchema, {
       cache: "no-store",
     }),
+
+  /** Refina um roteiro existente com uma instrução (FR-40). */
+  refine: (id: string, instruction: string) =>
+    request<ExecutionCreated>(
+      `/v1/executions/${id}/refine`,
+      executionCreatedSchema,
+      {
+        method: "POST",
+        body: JSON.stringify({ instruction }),
+      },
+    ),
+
+  /** Restaura uma versão anterior (FR-41). */
+  rollback: (id: string, targetExecutionId: string) =>
+    request<ExecutionCreated>(
+      `/v1/executions/${id}/rollback`,
+      executionCreatedSchema,
+      {
+        method: "POST",
+        body: JSON.stringify({ target_execution_id: targetExecutionId }),
+      },
+    ),
+
+  /** Lista as versões da linhagem (FR-41). */
+  getVersions: (id: string) =>
+    request<VersionList>(`/v1/executions/${id}/versions`, versionListSchema, {
+      cache: "no-store",
+    }),
 };
 
 export type {
@@ -149,4 +179,5 @@ export type {
   GeoJson,
   Health,
   LocalizationOptions,
+  VersionList,
 };

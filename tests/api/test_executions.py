@@ -1,4 +1,4 @@
-"""Testes das rotas de execução (FR-02, FR-04, FR-05, FR-09)."""
+"""Testes das rotas de execução (FR-02, FR-04, FR-05, FR-09, FR-40, FR-41)."""
 
 import uuid
 from datetime import UTC, datetime
@@ -8,7 +8,13 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.errors import PROBLEM_CONTENT_TYPE
-from src.db.models import Execution, ExecutionStatus, Itinerary, UsageRecord
+from src.db.models import (
+    Execution,
+    ExecutionKind,
+    ExecutionStatus,
+    Itinerary,
+    UsageRecord,
+)
 
 VALID_BRIEFING = {
     "origem": "São Paulo, Brasil",
@@ -332,3 +338,261 @@ async def test_stream_relays_progress_events(
 
     assert "Consultando o Guia Local" in payload
     assert "Roteiro concluído" in payload
+
+
+# ---------------------------------------------------------------------------
+# POST /v1/executions/{id}/refine (FR-40)
+# ---------------------------------------------------------------------------
+
+
+async def test_refine_creates_child_execution(
+    client: AsyncClient, db_session: AsyncSession, mocker
+) -> None:
+    """Refine cria execução filha com kind=refine e enfileira."""
+    spy = mocker.patch("src.api.routers.executions.enqueue_generation")
+    parent = await _persist_execution(db_session, status=ExecutionStatus.SUCCEEDED)
+    db_session.add(Itinerary(execution_id=parent.id, content_markdown="# Roteiro"))
+    await db_session.commit()
+
+    response = await client.post(
+        f"/v1/executions/{parent.id}/refine",
+        json={"instruction": "Inclua mais museus"},
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    child_id = uuid.UUID(body["id"])
+    assert child_id != parent.id
+    spy.assert_awaited_once()
+
+    child = await db_session.get(Execution, child_id)
+    assert child is not None
+    assert child.kind == ExecutionKind.REFINE
+    assert child.parent_execution_id == parent.id
+    assert child.root_execution_id == parent.id
+    assert child.refine_instruction == "Inclua mais museus"
+    assert child.status == ExecutionStatus.QUEUED
+
+
+async def test_refine_returns_409_when_parent_not_succeeded(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """Refine de execução não concluída retorna 409."""
+    parent = await _persist_execution(db_session, status=ExecutionStatus.RUNNING)
+
+    response = await client.post(
+        f"/v1/executions/{parent.id}/refine",
+        json={"instruction": "mude algo"},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["type"].endswith("execution-not-succeeded")
+
+
+async def test_refine_returns_409_when_no_itinerary(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """Refine de execução sem roteiro retorna 409."""
+    parent = await _persist_execution(db_session, status=ExecutionStatus.SUCCEEDED)
+
+    response = await client.post(
+        f"/v1/executions/{parent.id}/refine",
+        json={"instruction": "mude algo"},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["type"].endswith("no-itinerary")
+
+
+async def test_refine_returns_404_for_unknown_execution(
+    client: AsyncClient,
+) -> None:
+    """Refine de execução inexistente retorna 404."""
+    response = await client.post(
+        f"/v1/executions/{uuid.uuid4()}/refine",
+        json={"instruction": "teste"},
+    )
+
+    assert response.status_code == 404
+
+
+async def test_refine_returns_422_for_empty_instruction(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """Instrução vazia retorna 422."""
+    parent = await _persist_execution(db_session, status=ExecutionStatus.SUCCEEDED)
+    db_session.add(Itinerary(execution_id=parent.id, content_markdown="# Roteiro"))
+    await db_session.commit()
+
+    response = await client.post(
+        f"/v1/executions/{parent.id}/refine",
+        json={"instruction": ""},
+    )
+
+    assert response.status_code == 422
+
+
+async def test_refine_returns_429_when_rate_limited(
+    client: AsyncClient, db_session: AsyncSession, fake_rate_limiter
+) -> None:
+    """Refine consome cota do rate limit."""
+    fake_rate_limiter.allowed = False
+    parent = await _persist_execution(db_session, status=ExecutionStatus.SUCCEEDED)
+    db_session.add(Itinerary(execution_id=parent.id, content_markdown="# Roteiro"))
+    await db_session.commit()
+
+    response = await client.post(
+        f"/v1/executions/{parent.id}/refine",
+        json={"instruction": "mude algo"},
+    )
+
+    assert response.status_code == 429
+
+
+# ---------------------------------------------------------------------------
+# POST /v1/executions/{id}/rollback (FR-41)
+# ---------------------------------------------------------------------------
+
+
+async def test_rollback_creates_child_execution(
+    client: AsyncClient, db_session: AsyncSession, mocker
+) -> None:
+    """Rollback cria execução filha com kind=rollback."""
+    spy = mocker.patch("src.api.routers.executions.enqueue_generation")
+    root = await _persist_execution(db_session, status=ExecutionStatus.SUCCEEDED)
+    db_session.add(
+        Itinerary(execution_id=root.id, content_markdown="# Versão 1", version=1)
+    )
+    await db_session.commit()
+
+    response = await client.post(
+        f"/v1/executions/{root.id}/rollback",
+        json={"target_execution_id": str(root.id)},
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    child_id = uuid.UUID(body["id"])
+    spy.assert_awaited_once()
+
+    child = await db_session.get(Execution, child_id)
+    assert child is not None
+    assert child.kind == ExecutionKind.ROLLBACK
+    assert child.parent_execution_id == root.id
+    assert child.root_execution_id == root.id
+    assert "Restaurada a versão 1" in (child.refine_instruction or "")
+
+
+async def test_rollback_returns_409_when_target_has_no_itinerary(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """Rollback para alvo sem roteiro retorna 409."""
+    current = await _persist_execution(db_session, status=ExecutionStatus.SUCCEEDED)
+    target = await _persist_execution(db_session, status=ExecutionStatus.SUCCEEDED)
+
+    response = await client.post(
+        f"/v1/executions/{current.id}/rollback",
+        json={"target_execution_id": str(target.id)},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["type"].endswith("no-itinerary")
+
+
+async def test_rollback_returns_404_for_unknown_target(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """Rollback com alvo inexistente retorna 404."""
+    current = await _persist_execution(db_session, status=ExecutionStatus.SUCCEEDED)
+
+    response = await client.post(
+        f"/v1/executions/{current.id}/rollback",
+        json={"target_execution_id": str(uuid.uuid4())},
+    )
+
+    assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# GET /v1/executions/{id}/versions (FR-41)
+# ---------------------------------------------------------------------------
+
+
+async def test_versions_lists_lineage_ordered(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """Lista as versões da linhagem ordenadas por número."""
+    root = await _persist_execution(db_session, status=ExecutionStatus.SUCCEEDED)
+    db_session.add(
+        Itinerary(execution_id=root.id, content_markdown="# V1", version=1)
+    )
+    child = await _persist_execution(
+        db_session,
+        status=ExecutionStatus.SUCCEEDED,
+        kind=ExecutionKind.REFINE,
+        parent_execution_id=root.id,
+        root_execution_id=root.id,
+        refine_instruction="mais museus",
+    )
+    db_session.add(
+        Itinerary(execution_id=child.id, content_markdown="# V2", version=2)
+    )
+    await db_session.commit()
+
+    response = await client.get(f"/v1/executions/{child.id}/versions")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["root_execution_id"] == str(root.id)
+    assert body["current_version"] == 2
+    assert len(body["versions"]) == 2
+    assert body["versions"][0]["version"] == 1
+    assert body["versions"][0]["kind"] == "initial"
+    assert body["versions"][1]["version"] == 2
+    assert body["versions"][1]["kind"] == "refine"
+
+
+async def test_versions_returns_404_for_unknown_execution(
+    client: AsyncClient,
+) -> None:
+    """Versions de execução inexistente retorna 404."""
+    response = await client.get(f"/v1/executions/{uuid.uuid4()}/versions")
+
+    assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# GET /v1/executions/{id} — campos de linhagem
+# ---------------------------------------------------------------------------
+
+
+async def test_get_execution_includes_lineage_fields(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """Detalhe inclui kind, version e IDs de linhagem."""
+    root = await _persist_execution(db_session, status=ExecutionStatus.SUCCEEDED)
+    db_session.add(
+        Itinerary(execution_id=root.id, content_markdown="# Roteiro", version=1)
+    )
+    child = await _persist_execution(
+        db_session,
+        status=ExecutionStatus.SUCCEEDED,
+        kind=ExecutionKind.REFINE,
+        parent_execution_id=root.id,
+        root_execution_id=root.id,
+        refine_instruction="Inclua museus",
+    )
+    db_session.add(
+        Itinerary(execution_id=child.id, content_markdown="# V2", version=2)
+    )
+    await db_session.commit()
+
+    response = await client.get(f"/v1/executions/{child.id}")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["kind"] == "refine"
+    assert body["version"] == 2
+    assert body["parent_execution_id"] == str(root.id)
+    assert body["root_execution_id"] == str(root.id)
+    assert body["refine_instruction"] == "Inclua museus"

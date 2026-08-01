@@ -3,7 +3,7 @@
 > **Documento de Requisitos de Produto (PRD)** — consolida a revisão estratégica do
 > projeto, as decisões tomadas e o plano de modernização da arquitetura.
 >
-> **Versão:** 1.25 · **Status:** ✅ Fases 0, 1 e 2 concluídas · ✨ [Demo](https://voyager-web-b2607fcece65.herokuapp.com) · 🌐 [API](https://voyager-ia-d97e5ffe11f1.herokuapp.com/health) · 📚 [Documentação](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) · **Complementa:** [`specs/`](./specs/README.md)
+> **Versão:** 1.26 · **Status:** ✅ Fases 0, 1 e 2 concluídas · ✨ [Demo](https://voyager-web-b2607fcece65.herokuapp.com) · 🌐 [API](https://voyager-ia-d97e5ffe11f1.herokuapp.com/health) · 📚 [Documentação](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) · **Complementa:** [`specs/`](./specs/README.md)
 
 ***
 
@@ -616,6 +616,7 @@ extração da API (Fase 0). O status é controlado no checklist da §15.
 | 1.23   | **✨ Frontend EM PRODUÇÃO** (`voyager-web` no Heroku, custo total inalterado em US$ 13/mês): fluxo completo validado pela URL pública (Rio→Buenos Aires em 185s, 8 pinos corretos no mapa, FinOps com dados reais, zero erros de CORS). **Lighthouse mobile: Perf 96-98 / A11y 100 / BP 100 / SEO 100** — a nota de A11y subiu de 93 para 100 corrigindo a estrutura dos `<dl>`. Dep morta `motion` removida. Lição de medição: rodar Lighthouse com a máquina ocupada (build Docker em paralelo) derrubou a nota de 96 para 36 — variância de ambiente, não do site |
 | 1.24   | **Streamlit aposentado** (último item do DoD da Fase 2): removidos `app.py`, o serviço do compose, o sink dedicado no logger, 6 dependências (`streamlit`, `folium`, `streamlit-folium`, `langchain-groq`, `langchain-google-genai`, `google-generativeai`) e as chaves legadas `GROQ/GOOGLE/SERPER_API_KEY` (débito da Fase 0 quitado). O estágio `runtime` do Dockerfile virou base sem CMD. C4 de contêineres redesenhado para o estado em produção |
 | 1.25   | **Export Markdown (FR-06) entregue — Fase 2 100% concluída**: botão "Baixar roteiro (.md)" na página da execução; documento montado 100% no cliente (Blob) com bloco de proveniência (marca, briefing, data) antes do roteiro na íntegra; nome de arquivo sanitizado com slug do destino. Nova suíte Playwright `generation.spec.ts` (fluxo completo briefing → roteiro → download real, opt-in `E2E_API=1` por exigir API no ar — pulada no CI). 80 testes de unidade, cobertura 98% |
+| 1.26   | **Refinamento e versionamento de roteiro (FR-40/FR-41)**: refine reexecuta a crew completa com contexto (roteiro anterior + instrução); versionamento com linhagem (root/parent), rollback append-only (cópia sem LLM), diff client-side (jsdiff). Novos endpoints `POST /refine`, `POST /rollback`, `GET /versions`. Frontend: refine-panel, version-history, version-diff. ADR-0017 registrado |
 
 ***
 

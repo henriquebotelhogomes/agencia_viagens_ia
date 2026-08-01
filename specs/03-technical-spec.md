@@ -104,9 +104,11 @@ REST + OpenAPI (gerado por FastAPI). Exemplos de recursos:
 | `GET` | `/v1/executions/{id}/stream` | SSE de progresso da execução. |
 | `GET` | `/v1/executions/{id}` | Estado e resultado da execução. |
 | `POST` | `/v1/executions/{id}/cancel` | Cancela execução. |
+| `POST` | `/v1/executions/{id}/refine` | Refina roteiro com instrução do usuário (FR-40). |
+| `POST` | `/v1/executions/{id}/rollback` | Restaura versão anterior (FR-41). |
+| `GET` | `/v1/executions/{id}/versions` | Lista versões da linhagem (FR-41). |
 | `GET` | `/v1/itineraries` | Lista roteiros do workspace. |
 | `GET` | `/v1/itineraries/{id}` | Detalhe + versões. |
-| `POST` | `/v1/itineraries/{id}/refine` | Cria nova versão a partir de instrução. |
 | `POST` | `/v1/itineraries/{id}/export` | Gera PDF/Markdown/.ics. |
 | `POST` | `/v1/feedback` | Registra feedback. |
 | `GET` | `/v1/admin/finops` | Métricas de custo (RBAC admin). |

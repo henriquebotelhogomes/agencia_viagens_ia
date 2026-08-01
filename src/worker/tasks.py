@@ -11,13 +11,19 @@ from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 
 from src.api.schemas import ProgressEvent
 from src.config import get_settings
 from src.crew_builder import CrewBuilder
 from src.db.base import get_session_factory
-from src.db.models import Execution, ExecutionStatus, Itinerary, UsageRecord
+from src.db.models import (
+    Execution,
+    ExecutionKind,
+    ExecutionStatus,
+    Itinerary,
+    UsageRecord,
+)
 from src.services.cache_service import get_cache_service
 from src.services.finance_service import FinanceService
 from src.services.geocoding_service import GeocodingService
@@ -88,38 +94,11 @@ async def _run_job(
         await _publish(progress, execution, "Execução iniciada.", STEP_ORCHESTRATION)
 
         try:
-            markdown, token_usage, used_fallback, from_cache = await _produce_itinerary(
-                execution, progress
-            )
-
-            await _publish(
-                progress, execution, "Geolocalizando pontos do roteiro…", STEP_GEOCODING
-            )
-            geojson = await _build_geojson(markdown, execution.destino)
-
-            session.add(
-                Itinerary(
-                    execution_id=execution.id,
-                    content_markdown=markdown,
-                    locations_geojson=geojson,
-                )
-            )
-            _record_usage(session, execution, token_usage, from_cache)
-
-            execution.status = ExecutionStatus.SUCCEEDED
-            execution.served_from_cache = from_cache
-            execution.used_fallback = used_fallback
-            execution.llm_gateway = "openrouter" if used_fallback else "opencode_go"
-            execution.duration_seconds = round(time.perf_counter() - started, 2)
-            execution.finished_at = datetime.now(UTC)
-            await session.commit()
-
-            await _publish(progress, execution, "Roteiro concluído.", STEP_DONE)
-            logger.info(
-                f"Execução {execution_id} concluída em "
-                f"{execution.duration_seconds}s (cache={from_cache})."
-            )
-            return ExecutionStatus.SUCCEEDED.value
+            if execution.kind == ExecutionKind.ROLLBACK:
+                return await _run_rollback(session, execution, progress, started)
+            if execution.kind == ExecutionKind.REFINE:
+                return await _run_refine(session, execution, progress, started)
+            return await _run_initial(session, execution, progress, started)
 
         except Exception as e:
             # `exception=True` inclui o stack trace: sem ele, só se sabe *que*
@@ -136,6 +115,152 @@ async def _run_job(
             return ExecutionStatus.FAILED.value
         finally:
             await progress.close()
+
+
+async def _run_initial(
+    session: Any, execution: Execution, progress: ProgressBus, started: float
+) -> str:
+    """Fluxo original: cache → crew → geocoding."""
+    markdown, token_usage, used_fallback, from_cache = await _produce_itinerary(
+        execution, progress
+    )
+
+    await _publish(
+        progress, execution, "Geolocalizando pontos do roteiro…", STEP_GEOCODING
+    )
+    geojson = await _build_geojson(markdown, execution.destino)
+
+    session.add(
+        Itinerary(
+            execution_id=execution.id,
+            content_markdown=markdown,
+            locations_geojson=geojson,
+        )
+    )
+    _record_usage(session, execution, token_usage, from_cache)
+
+    execution.status = ExecutionStatus.SUCCEEDED
+    execution.served_from_cache = from_cache
+    execution.used_fallback = used_fallback
+    execution.llm_gateway = "openrouter" if used_fallback else "opencode_go"
+    execution.duration_seconds = round(time.perf_counter() - started, 2)
+    execution.finished_at = datetime.now(UTC)
+    await session.commit()
+
+    await _publish(progress, execution, "Roteiro concluído.", STEP_DONE)
+    logger.info(
+        f"Execução {execution.id} concluída em "
+        f"{execution.duration_seconds}s (cache={from_cache})."
+    )
+    return ExecutionStatus.SUCCEEDED.value
+
+
+async def _run_refine(
+    session: Any, execution: Execution, progress: ProgressBus, started: float
+) -> str:
+    """Refine: reexecuta a crew completa com contexto do roteiro anterior."""
+    # Carrega o markdown do pai
+    parent_itinerary = await session.scalar(
+        select(Itinerary).where(Itinerary.execution_id == execution.parent_execution_id)
+    )
+    previous_markdown = parent_itinerary.content_markdown if parent_itinerary else ""
+
+    builder = CrewBuilder(
+        destino=execution.destino,
+        dias=execution.dias,
+        origem=execution.origem,
+        interesses=execution.interesses,
+        moeda=execution.moeda,
+        idioma=execution.idioma,
+        refine_instruction=execution.refine_instruction,
+        previous_itinerary=previous_markdown,
+    )
+    # Refine nunca usa cache: a instrução é única
+    result = await asyncio.to_thread(builder.run)
+    markdown = str(result)
+
+    await _publish(
+        progress, execution, "Geolocalizando pontos do roteiro…", STEP_GEOCODING
+    )
+    geojson = await _build_geojson(markdown, execution.destino)
+
+    version = await _next_version(session, execution)
+    session.add(
+        Itinerary(
+            execution_id=execution.id,
+            content_markdown=markdown,
+            locations_geojson=geojson,
+            version=version,
+        )
+    )
+    _record_usage(session, execution, getattr(result, "token_usage", None), False)
+
+    execution.status = ExecutionStatus.SUCCEEDED
+    execution.served_from_cache = False
+    execution.used_fallback = builder.use_fallback
+    execution.llm_gateway = "openrouter" if builder.use_fallback else "opencode_go"
+    execution.duration_seconds = round(time.perf_counter() - started, 2)
+    execution.finished_at = datetime.now(UTC)
+    await session.commit()
+
+    await _publish(progress, execution, "Roteiro refinado concluído.", STEP_DONE)
+    logger.info(
+        f"Refine da execução {execution.id} concluído em "
+        f"{execution.duration_seconds}s (versão {version})."
+    )
+    return ExecutionStatus.SUCCEEDED.value
+
+
+async def _run_rollback(
+    session: Any, execution: Execution, progress: ProgressBus, started: float
+) -> str:
+    """Rollback: copia o conteúdo do alvo sem LLM/geocoding."""
+    target_itinerary = await session.scalar(
+        select(Itinerary).where(Itinerary.execution_id == execution.parent_execution_id)
+    )
+    if target_itinerary is None:
+        raise ValueError(
+            f"Execução alvo {execution.parent_execution_id} não possui roteiro."
+        )
+
+    version = await _next_version(session, execution)
+    session.add(
+        Itinerary(
+            execution_id=execution.id,
+            content_markdown=target_itinerary.content_markdown,
+            locations_geojson=target_itinerary.locations_geojson,
+            version=version,
+        )
+    )
+
+    execution.status = ExecutionStatus.SUCCEEDED
+    execution.served_from_cache = False
+    execution.used_fallback = False
+    execution.duration_seconds = round(time.perf_counter() - started, 2)
+    execution.finished_at = datetime.now(UTC)
+    await session.commit()
+
+    await _publish(progress, execution, "Versão restaurada.", STEP_DONE)
+    logger.info(
+        f"Rollback da execução {execution.id} concluído (versão {version})."
+    )
+    return ExecutionStatus.SUCCEEDED.value
+
+
+async def _next_version(session: Any, execution: Execution) -> int:
+    """Calcula a próxima versão na linhagem: max(versão) + 1."""
+    root_id = execution.root_execution_id or execution.id
+    max_version = await session.scalar(
+        select(func.max(Itinerary.version))
+        .join(Execution, Itinerary.execution_id == Execution.id)
+        .where(
+            or_(
+                Execution.id == root_id,
+                Execution.root_execution_id == root_id,
+            )
+        )
+    )
+    return (max_version or 0) + 1
 
 
 async def _produce_itinerary(

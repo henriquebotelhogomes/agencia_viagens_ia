@@ -20,6 +20,10 @@ export const EXECUTION_STATUSES = [
 
 export type ExecutionStatus = (typeof EXECUTION_STATUSES)[number];
 
+export const EXECUTION_KINDS = ["initial", "refine", "rollback"] as const;
+
+export type ExecutionKind = (typeof EXECUTION_KINDS)[number];
+
 /** Estados em que não há mais atualização a esperar. */
 export const TERMINAL_STATUSES: readonly ExecutionStatus[] = [
   "succeeded",
@@ -93,6 +97,12 @@ export const executionDetailSchema = z.object({
   used_fallback: z.boolean(),
   llm_gateway: z.string().nullable(),
   cost: costSummarySchema.nullable(),
+  // Linhagem de versões (FR-40/FR-41)
+  kind: z.enum(EXECUTION_KINDS).default("initial"),
+  version: z.number().nullable().default(null),
+  parent_execution_id: z.string().nullable().default(null),
+  root_execution_id: z.string().nullable().default(null),
+  refine_instruction: z.string().nullable().default(null),
 });
 
 export type ExecutionDetail = z.infer<typeof executionDetailSchema>;
@@ -190,3 +200,27 @@ export const finOpsSummarySchema = z.object({
 
 export type FinOpsSummary = z.infer<typeof finOpsSummarySchema>;
 export type FinOpsDailyPoint = z.infer<typeof finOpsDailyPointSchema>;
+
+// ---------------------------------------------------------------------------
+// Versionamento (FR-40 / FR-41)
+// ---------------------------------------------------------------------------
+
+export const versionSummarySchema = z.object({
+  id: z.string(),
+  version: z.number(),
+  kind: z.enum(EXECUTION_KINDS),
+  refine_instruction: z.string().nullable(),
+  status: z.enum(EXECUTION_STATUSES),
+  created_at: z.string(),
+  duration_seconds: z.number().nullable(),
+});
+
+export type VersionSummary = z.infer<typeof versionSummarySchema>;
+
+export const versionListSchema = z.object({
+  root_execution_id: z.string(),
+  current_version: z.number(),
+  versions: z.array(versionSummarySchema),
+});
+
+export type VersionList = z.infer<typeof versionListSchema>;

@@ -11,7 +11,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from src.db.models import ExecutionStatus
+from src.db.models import ExecutionKind, ExecutionStatus
 from src.utils.localization import (
     CURRENCY_SYMBOLS,
     DEFAULT_CURRENCY,
@@ -111,6 +111,49 @@ class ExecutionDetail(BaseModel):
     cost: CostSummary = Field(default_factory=CostSummary)
     created_at: datetime
     finished_at: datetime | None = None
+    # Linhagem de versões (FR-40/FR-41)
+    kind: ExecutionKind = ExecutionKind.INITIAL
+    version: int | None = None
+    parent_execution_id: uuid.UUID | None = None
+    root_execution_id: uuid.UUID | None = None
+    refine_instruction: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# Refinamento e versionamento (FR-40 / FR-41)
+# ---------------------------------------------------------------------------
+
+
+class RefineRequest(BaseModel):
+    """Instrução do usuário para refinar um roteiro existente."""
+
+    instruction: Annotated[str, Field(min_length=1, max_length=1000)]
+
+
+class RollbackRequest(BaseModel):
+    """Alvo do rollback — a versão a restaurar."""
+
+    target_execution_id: uuid.UUID
+
+
+class VersionSummary(BaseModel):
+    """Resumo de uma versão na linhagem."""
+
+    id: uuid.UUID
+    version: int
+    kind: ExecutionKind
+    refine_instruction: str | None = None
+    status: ExecutionStatus
+    created_at: datetime
+    duration_seconds: float | None = None
+
+
+class VersionList(BaseModel):
+    """Lista ordenada de versões de uma linhagem."""
+
+    root_execution_id: uuid.UUID
+    current_version: int
+    versions: list[VersionSummary]
 
 
 class GeoJSONFeatureCollection(BaseModel):
