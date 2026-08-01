@@ -33,6 +33,17 @@ def connection_kwargs(settings: Settings | None = None, **extra: Any) -> dict[st
     resolved = settings or get_settings()
     kwargs: dict[str, Any] = {
         "socket_connect_timeout": resolved.REDIS_CONNECT_TIMEOUT,
+        # Robustez para hospedagem gerenciada (ADR-015): a rede do Heroku
+        # derruba conexões TCP ociosas/longas sem avisar. Sem keepalive o
+        # cliente não percebe a conexão morta e o polling do SAQ pendura para
+        # sempre — o worker fica "up" mas para de consumir a fila.
+        # keepalive: sondas TCP detectam o peer morto no nível do SO.
+        "socket_keepalive": True,
+        # health_check: PING antes de reusar conexão ociosa há >30s; se falhar,
+        # o pool reconecta em vez de entregar uma conexão zumbi.
+        "health_check_interval": 30,
+        # Uma nova tentativa em timeout transitório evita falha espúria.
+        "retry_on_timeout": True,
     }
     if resolved.REDIS_URL.startswith("rediss://"):
         # Certificado self-signed: cifra o tráfego sem exigir cadeia confiável

@@ -95,6 +95,19 @@ def test_timeout_de_conexao_sempre_aplicado() -> None:
     assert kwargs["socket_connect_timeout"] == 7.5
 
 
+def test_keepalive_e_health_check_sempre_aplicados() -> None:
+    """Sem keepalive, a rede do Heroku derruba a conexão e o worker pendura.
+
+    O polling do SAQ bloqueia num BLPOP; se a conexão TCP morre sem aviso e não
+    há keepalive/health check, o worker fica "up" mas para de consumir a fila.
+    """
+    kwargs = connection_kwargs(_settings(REDIS_URL="redis://localhost:6379"))
+
+    assert kwargs["socket_keepalive"] is True
+    assert kwargs["health_check_interval"] == 30
+    assert kwargs["retry_on_timeout"] is True
+
+
 def test_extras_do_chamador_sobrepoem_os_padroes() -> None:
     """Cada serviço ajusta o que precisa sem duplicar a base."""
     kwargs = connection_kwargs(
