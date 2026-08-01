@@ -870,7 +870,7 @@ Controle de status das tarefas. Legenda: `[ ]` pendente · `[~]` em andamento ·
 
 * [x] Docs: ADR-0017, specs 02/03/09/10 atualizados
 
-* [ ] Deploy em produção (Docker Desktop pendente)
+* [x] Deploy em produção (backend web+worker+release; frontend voyager-web)
 
 ### 15.5 Fase 3 — Excelência operacional
 
