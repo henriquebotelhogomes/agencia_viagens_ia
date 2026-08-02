@@ -93,6 +93,64 @@ jobs:
           path: frontend/playwright-report/
           retention-days: 7
 
+  integrated-e2e:
+    name: E2E integrado (API + worker + SSE)
+    needs: [quality, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Criar ambiente sem credenciais externas
+        run: touch .env
+
+      - name: Subir banco e fila
+        run: E2E_FAKE_GENERATION=true docker compose up --build -d postgres redis
+
+      - name: Aplicar migrations
+        run: E2E_FAKE_GENERATION=true docker compose run --rm api alembic upgrade head
+
+      - name: Subir API e worker determinístico
+        run: E2E_FAKE_GENERATION=true docker compose up --build -d api worker
+
+      - name: Aguardar API
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/health > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose logs api worker
+          exit 1
+
+      - name: Instalar dependências e navegador
+        working-directory: ./frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Exercitar briefing, fila, SSE e roteiro
+        working-directory: ./frontend
+        env:
+          E2E_API: '1'
+          NEXT_PUBLIC_API_URL: http://localhost:8000
+        run: npx playwright test e2e/generation.spec.ts --project=desktop
+
+      - name: Publicar logs do Compose em caso de falha
+        if: failure()
+        run: docker compose logs
+
+      - name: Encerrar serviços
+        if: always()
+        run: docker compose down -v
+
   docs:
     name: Documentação viva (PRD D13)
     runs-on: ubuntu-latest

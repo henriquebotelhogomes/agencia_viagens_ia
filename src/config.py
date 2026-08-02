@@ -92,6 +92,8 @@ class Settings(BaseSettings):
     QUEUE_NAME: str = "voyager"
     JOB_TIMEOUT_SECONDS: int = 600
     WORKER_CONCURRENCY: int = 2
+    # Somente CI E2E: executa um roteiro determinístico sem LLM ou rede.
+    E2E_FAKE_GENERATION: bool = False
     CACHE_TTL_SECONDS: int = 86400  # 24 horas
     # TTL longo: coordenadas de atrações turísticas raramente mudam
     GEOCODING_CACHE_TTL_SECONDS: int = 2_592_000  # 30 dias

@@ -11,6 +11,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.db.base import Base
@@ -167,6 +168,30 @@ async def test_successful_run_builds_geojson_features(
     # O local sem coordenada é descartado
     assert len(geojson["features"]) == 1
     assert geojson["features"][0]["geometry"]["coordinates"] == [12.4922, 41.8902]
+
+
+async def test_e2e_fake_generation_persists_deterministic_itinerary(
+    mocker, session_factory, worker_env
+) -> None:
+    """O modo E2E valida fila/SSE sem chamar provedores externos."""
+    execution_id = await _create_execution(session_factory)
+    crew = mocker.patch("src.worker.tasks.CrewBuilder")
+
+    result = await tasks._run_job(
+        execution_id,
+        worker_env["progress"],
+        session_factory,
+        fake_generation=True,
+    )
+
+    assert result == ExecutionStatus.SUCCEEDED.value
+    crew.assert_not_called()
+    async with session_factory() as session:
+        itinerary = await session.scalar(
+            select(Itinerary).where(Itinerary.execution_id == execution_id)
+        )
+        assert itinerary is not None
+        assert "Roma" in itinerary.content_markdown
 
 
 async def test_cache_hit_skips_crew_and_records_no_cost(

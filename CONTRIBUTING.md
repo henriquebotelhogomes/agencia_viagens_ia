@@ -15,11 +15,19 @@ uv run pre-commit install     # feedback antes do push
 ## Antes de abrir um PR
 
 ```bash
-uv run ruff check src/ tests/ app.py scripts/
-uv run ruff format src/ tests/ app.py scripts/
+uv run ruff check src/ tests/ scripts/ alembic/
+uv run ruff format src/ tests/ scripts/ alembic/ --check
 uv run mypy src/ --strict
 uv run pytest tests/ --cov=src
 uv run mkdocs build --strict    # requer: uv sync --group docs
+
+cd frontend
+npm ci
+npm run typecheck
+npm run lint
+npm run test:cov
+npm run build
+npm run e2e
 ```
 
 ## Definition of Done

@@ -5,15 +5,16 @@ import { readFileSync } from "node:fs";
  * Fluxo completo: briefing → geração ao vivo → roteiro → export Markdown.
  *
  * Precisa da **API no ar** (stack local via `docker compose up` ou produção,
- * apontando `E2E_BASE_URL`). Por isso é opt-in via `E2E_API=1` — no CI a suíte
- * é pulada, pois o pipeline não tem API nem chaves de LLM:
+ * apontando `E2E_BASE_URL`). É opt-in via `E2E_API=1`; o CI habilita a flag
+ * com API, Redis, Postgres e worker reais, mas usa roteiro determinístico no
+ * worker para não depender de chaves de LLM:
  *
  * ```bash
  * E2E_API=1 npx playwright test e2e/generation.spec.ts
  * ```
  *
- * O timeout de 5min do config existe para este teste: uma geração real leva
- * ~2-3min até o roteiro aparecer.
+ * O timeout de 5min também permite executar o mesmo spec contra uma geração
+ * real local ou em produção.
  */
 const COM_API = Boolean(process.env.E2E_API);
 
@@ -35,8 +36,8 @@ test.describe("Geração completa", () => {
     await page.waitForURL(/\/executions\//);
 
     // O botão só existe com o roteiro pronto — é o nosso "geração terminou".
-    // Cold start do worker após restart do dyno leva ~3min (init do CrewAI +
-    // litellm) antes dos ~70-90s da geração em si; 270s cobre esse pior caso.
+    // Em CI o worker termina imediatamente; em ambiente real, 270s cobre cold
+    // start e a geração completa.
     const botaoExport = page.getByRole("button", { name: /baixar roteiro/i });
     await expect(botaoExport).toBeVisible({ timeout: 270_000 });
 

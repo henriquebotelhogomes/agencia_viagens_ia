@@ -65,7 +65,12 @@ async def generate_itinerary(
         "generate_itinerary",
         attributes={"voyager.execution_id": execution_id},
     ) as span:
-        status = await _run_job(exec_uuid, progress, session_factory)
+        status = await _run_job(
+            exec_uuid,
+            progress,
+            session_factory,
+            fake_generation=settings.E2E_FAKE_GENERATION,
+        )
         span.set_attribute("voyager.execution_status", status)
         return status
 
@@ -74,6 +79,8 @@ async def _run_job(
     exec_uuid: uuid.UUID,
     progress: ProgressBus,
     session_factory: Any,
+    *,
+    fake_generation: bool = False,
 ) -> str:
     """Corpo do job, separado para o span raiz envolver o fluxo inteiro."""
     execution_id = str(exec_uuid)
@@ -115,6 +122,8 @@ async def _run_job(
         await _publish(progress, execution, "Execução iniciada.", STEP_ORCHESTRATION)
 
         try:
+            if fake_generation and execution.kind == ExecutionKind.INITIAL:
+                return await _run_fake_initial(session, execution, progress, started)
             if execution.kind == ExecutionKind.ROLLBACK:
                 return await _run_rollback(session, execution, progress, started)
             if execution.kind == ExecutionKind.REFINE:
@@ -153,6 +162,28 @@ async def _run_job(
             return ExecutionStatus.FAILED.value
         finally:
             await progress.close()
+
+
+async def _run_fake_initial(
+    session: Any, execution: Execution, progress: ProgressBus, started: float
+) -> str:
+    """Conclui uma execução previsível para o E2E do CI, sem serviços externos."""
+    markdown = (
+        f"# Roteiro de {execution.destino}\n\n"
+        f"## Dia 1\n"
+        f"Explore {execution.destino} com foco em {execution.interesses}.\n"
+    )
+    session.add(Itinerary(execution_id=execution.id, content_markdown=markdown))
+    execution.status = ExecutionStatus.SUCCEEDED
+    execution.served_from_cache = False
+    execution.used_fallback = False
+    execution.llm_gateway = "e2e_fake"
+    execution.duration_seconds = round(time.perf_counter() - started, 2)
+    execution.finished_at = datetime.now(UTC)
+    await session.commit()
+
+    await _publish(progress, execution, "Roteiro de teste concluído.", STEP_DONE)
+    return ExecutionStatus.SUCCEEDED.value
 
 
 async def _run_initial(

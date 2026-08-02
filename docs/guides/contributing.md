@@ -16,7 +16,7 @@ verbal. Se o CI passa, o código está no padrão.
 Uma mudança está pronta quando:
 
 - [x] Tem teste (unitário no mínimo; de regressão se for correção de bug)
-- [x] Passa em `ruff check`, `ruff format --check`, `mypy --strict`
+- [x] Passa nos gates de backend, frontend e documentação aplicáveis à mudança
 - [x] Mantém a cobertura ≥ 90%
 - [x] Trata erros com log estruturado (nunca `except: pass`)
 - [x] Documentação atualizada no mesmo PR (docstring conta)
@@ -122,6 +122,28 @@ Todos foram erradicados na Fase 0. Reintroduzi-los reprova o PR:
 - Fixtures compartilhadas em `conftest.py`.
 - **Nunca** use chave real em teste — o fixture `isolate_secrets_from_env`
   remove as variáveis sensíveis automaticamente.
+
+## Gates locais
+
+O CI executa todos estes comandos. Rode os que se aplicam à sua alteração antes
+de abrir o PR:
+
+```bash
+# Backend
+uv run ruff check src/ tests/ scripts/ alembic/
+uv run ruff format src/ tests/ scripts/ alembic/ --check
+uv run mypy src/ --strict
+uv run pytest tests/ --cov=src
+
+# Frontend
+cd frontend
+npm ci
+npm run typecheck
+npm run lint
+npm run test:cov
+npm run build
+npm run e2e
+```
 
 ## Documentação
 

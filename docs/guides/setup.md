@@ -70,29 +70,40 @@ O script também **valida os IDs dos modelos** contra o catálogo dos provedores
 
 ## 3. Rodar a aplicação
 
-=== "Streamlit (playground)"
+=== "Stack completa (recomendado)"
 
     ```bash
-    uv run streamlit run app.py
+    docker compose up --build
     ```
 
-    Abre em <http://localhost:8501>.
+    Sobe PostgreSQL, Redis, API, worker e frontend. Abra o produto em
+    <http://localhost:3000>; a documentação interativa da API está em
+    <http://localhost:8000/docs>.
 
-=== "Docker Compose"
+=== "Serviços da aplicação"
 
     ```bash
-    docker compose up app
+    docker compose up --build api worker frontend
     ```
 
-    Sobe com healthcheck e `APP_ENV=local`.
+    Sobe os três serviços da aplicação e suas dependências (PostgreSQL e Redis)
+    com `APP_ENV=local`.
 
 ## 4. Rodar os gates de qualidade
 
 ```bash
-uv run ruff check src/ tests/ app.py scripts/   # lint
-uv run ruff format src/ tests/ app.py scripts/  # formatação
+uv run ruff check src/ tests/ scripts/ alembic/          # lint
+uv run ruff format src/ tests/ scripts/ alembic/ --check # estilo
 uv run mypy src/ --strict                       # tipagem
 uv run pytest tests/ --cov=src                  # testes + cobertura (mín. 90%)
+
+cd frontend
+npm ci
+npm run typecheck
+npm run lint
+npm run test:cov
+npm run build
+npm run e2e
 ```
 
 Instale os hooks de pre-commit para receber esse feedback antes do push:

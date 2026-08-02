@@ -77,6 +77,8 @@ services:
       - APP_ENV=local
       - DATABASE_URL=postgresql+asyncpg://voyager:voyager@postgres:5432/voyager
       - REDIS_URL=redis://redis:6379/0
+      # CI E2E usa worker determinístico; em desenvolvimento/produção é false.
+      - E2E_FAKE_GENERATION=${E2E_FAKE_GENERATION:-false}
       # Sem prompt interativo de tracing do CrewAI em ambiente headless
       # (o consentimento se perde no filesystem efêmero; ver .env.example)
       - CREWAI_TESTING=true
