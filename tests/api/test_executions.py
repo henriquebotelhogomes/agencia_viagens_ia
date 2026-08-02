@@ -523,9 +523,7 @@ async def test_versions_lists_lineage_ordered(
 ) -> None:
     """Lista as versões da linhagem ordenadas por número."""
     root = await _persist_execution(db_session, status=ExecutionStatus.SUCCEEDED)
-    db_session.add(
-        Itinerary(execution_id=root.id, content_markdown="# V1", version=1)
-    )
+    db_session.add(Itinerary(execution_id=root.id, content_markdown="# V1", version=1))
     child = await _persist_execution(
         db_session,
         status=ExecutionStatus.SUCCEEDED,
@@ -534,9 +532,7 @@ async def test_versions_lists_lineage_ordered(
         root_execution_id=root.id,
         refine_instruction="mais museus",
     )
-    db_session.add(
-        Itinerary(execution_id=child.id, content_markdown="# V2", version=2)
-    )
+    db_session.add(Itinerary(execution_id=child.id, content_markdown="# V2", version=2))
     await db_session.commit()
 
     response = await client.get(f"/v1/executions/{child.id}/versions")
@@ -582,9 +578,7 @@ async def test_get_execution_includes_lineage_fields(
         root_execution_id=root.id,
         refine_instruction="Inclua museus",
     )
-    db_session.add(
-        Itinerary(execution_id=child.id, content_markdown="# V2", version=2)
-    )
+    db_session.add(Itinerary(execution_id=child.id, content_markdown="# V2", version=2))
     await db_session.commit()
 
     response = await client.get(f"/v1/executions/{child.id}")

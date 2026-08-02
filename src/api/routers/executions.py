@@ -373,9 +373,7 @@ async def rollback_execution(
     summary="Lista as versões da linhagem (FR-41)",
     responses={404: {"description": "Execução não encontrada"}},
 )
-async def list_versions(
-    execution_id: uuid.UUID, session: SessionDep
-) -> VersionList:
+async def list_versions(execution_id: uuid.UUID, session: SessionDep) -> VersionList:
     """Retorna todas as versões da linhagem, ordenadas por número de versão."""
     execution = await _load_execution(session, execution_id)
     root_id = execution.root_execution_id or execution.id

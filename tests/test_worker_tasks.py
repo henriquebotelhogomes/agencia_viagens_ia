@@ -495,13 +495,9 @@ async def test_next_version_increments_from_lineage(
     mocker, session_factory, worker_env
 ) -> None:
     """_next_version retorna max(versão da linhagem) + 1."""
-    root_id = await _create_execution(
-        session_factory, status=ExecutionStatus.SUCCEEDED
-    )
+    root_id = await _create_execution(session_factory, status=ExecutionStatus.SUCCEEDED)
     async with session_factory() as session:
-        session.add(
-            Itinerary(execution_id=root_id, content_markdown="# V1", version=1)
-        )
+        session.add(Itinerary(execution_id=root_id, content_markdown="# V1", version=1))
         await session.commit()
 
     child_id = await _create_execution(

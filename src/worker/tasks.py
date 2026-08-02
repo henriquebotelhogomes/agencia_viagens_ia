@@ -258,9 +258,7 @@ async def _run_rollback(
     await session.commit()
 
     await _publish(progress, execution, "Versão restaurada.", STEP_DONE)
-    logger.info(
-        f"Rollback da execução {execution.id} concluído (versão {version})."
-    )
+    logger.info(f"Rollback da execução {execution.id} concluído (versão {version}).")
     return ExecutionStatus.SUCCEEDED.value
 
 

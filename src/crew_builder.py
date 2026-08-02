@@ -70,7 +70,10 @@ class CrewBuilder:
     def create_research_task(self, agent: Agent, destino: str, interesses: str) -> Task:
         """Cria a tarefa de pesquisa."""
         return self.tasks_factory.research_destination(
-            agent, destino, interesses, idioma=self.idioma,
+            agent,
+            destino,
+            interesses,
+            idioma=self.idioma,
             refine_context=self._refine_context,
         )
 
@@ -79,7 +82,12 @@ class CrewBuilder:
     ) -> Task:
         """Cria a tarefa de logística."""
         return self.tasks_factory.calculate_logistics(
-            agent, destino, dias, origem, moeda=self.moeda, idioma=self.idioma,
+            agent,
+            destino,
+            dias,
+            origem,
+            moeda=self.moeda,
+            idioma=self.idioma,
             refine_context=self._refine_context,
         )
 
@@ -88,7 +96,12 @@ class CrewBuilder:
     ) -> Task:
         """Cria a tarefa de roteiro."""
         return self.tasks_factory.compile_itinerary(
-            agent, destino, dias, interesses, moeda=self.moeda, idioma=self.idioma,
+            agent,
+            destino,
+            dias,
+            interesses,
+            moeda=self.moeda,
+            idioma=self.idioma,
             refine_context=self._refine_context,
         )
 
