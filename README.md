@@ -40,13 +40,31 @@ IAs genéricas **alucinam** sobre horários, preços e locais que já fecharam. 
 
 ## 🖼️ O sistema em ação
 
-**Briefing** — o usuário informa origem, destino, dias, moeda, idioma e interesses; os chips aceleram o preenchimento.
+**1. Briefing** — o usuário informa origem, destino, dias, moeda, idioma e interesses; os chips aceleram o preenchimento.
 
-![Homepage da Voyager com o formulário de briefing](screenshots/01-frontend-homepage.png)
+![Homepage da Voyager com o formulário de briefing](screenshots/landingpage.png)
 
-**Execução concluída** — roteiro em Markdown, tabela de custos, painel FinOps (tokens reais + economia vs GPT-4o), mapa com os pontos geolocalizados e painel de refinamento.
+**2. Execução concluída** — progresso etapa a etapa (cache → agentes → geocoding → pronto), painel FinOps com tokens reais e economia vs GPT-4o, e o roteiro gerado.
 
-![Página de execução com roteiro, mapa e painel FinOps](screenshots/02-frontend-execucao.png)
+![Página de resultado com progresso, painel FinOps e roteiro](screenshots/result-1.png)
+
+**3. Custos reais na moeda pedida** — o gerente de logística pesquisa voos, hotel e alimentação via busca web e monta a tabela que o arquiteto reutiliza no roteiro (sem alucinação de preços).
+
+![Tabela de custos detalhada em BRL](screenshots/result-2.png)
+
+**4. Roteiro dia a dia** — cronograma manhã/tarde/noite, cada período com plano A (ideal), B (chuva) e C (ritmo leve).
+
+| Dia 1 | Dia 2 |
+| :---: | :---: |
+| ![Dia 1 do roteiro](screenshots/result-3.png) | ![Dia 2 do roteiro](screenshots/result-4.png) |
+
+**5. Dicas do arquiteto + mapa interativo** — recomendações práticas do arquiteto de roteiros e os pontos geolocalizados desenhados no MapLibre (100% no cliente, sem chave de tiles).
+
+![Dicas exclusivas do arquiteto e mapa com pins geolocalizados](screenshots/result-5.png)
+
+**6. Auditoria FinOps** — tokens medidos pelo provedor a cada chamada, custo por roteiro, economia vs GPT-4o e aproveitamento de cache, agregados por dia.
+
+![Dashboard FinOps com métricas e consumo por dia](screenshots/result-6.png)
 
 ---
 
@@ -149,6 +167,8 @@ flowchart TD
 ## 🔭 Observabilidade e documentação viva
 
 **[Langfuse](https://langfuse.com)** — plataforma open-source de observabilidade de LLM. Usamos para rastrear **cada chamada de modelo**: prompt, resposta, tokens, custo e latência, agrupados por execução. É o que transforma "quanto custa esse roteiro?" em uma métrica real, não um chute — e permite detectar regressões de qualidade ou de custo entre versões. Ver [ADR-0012](docs/adr/0012-observabilidade-llm.md).
+
+![Tracing de chamadas de LLM no Langfuse — latência, custo e modelo por observação](screenshots/langfuse.png)
 
 **[MkDocs Material](https://squidfunk.github.io/mkdocs-material/)** — documentação como código, versionada junto com o `src/` e publicada automaticamente pelo CI a cada merge. A referência de API é gerada dos docstrings (via mkdocstrings) e o build roda com `--strict`: link quebrado reprova o pipeline. Ver [ADR-0013](docs/adr/0013-documentacao-viva.md).
 
