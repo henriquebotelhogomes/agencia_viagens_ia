@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,7 @@ const INTEREST_CHIPS = [
 export function BriefingForm() {
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string>();
+  const idempotencyKeys = useRef(new Map<string, string>());
 
   const {
     register,
@@ -79,10 +80,14 @@ export function BriefingForm() {
   const onSubmit = async (briefing: TripBriefing) => {
     setSubmitError(undefined);
     try {
-      // Chave de idempotência derivada do briefing: reenviar o mesmo formulário
-      // devolve a execução original em vez de gastar tokens de novo.
-      const key = `${briefing.origem}|${briefing.destino}|${briefing.dias}|${briefing.interesses}|${briefing.moeda}|${briefing.idioma}`;
-      const created = await api.createExecution(briefing, await digest(key));
+      // A chave é aleatória por navegador, mas é mantida para um retry deste
+      // mesmo briefing após falha transitória. Nunca é compartilhada entre
+      // usuários que preencheram os mesmos campos.
+      const briefingKey = JSON.stringify(briefing);
+      const idempotencyKey =
+        idempotencyKeys.current.get(briefingKey) ?? crypto.randomUUID();
+      idempotencyKeys.current.set(briefingKey, idempotencyKey);
+      const created = await api.createExecution(briefing, idempotencyKey);
       router.push(`/executions/${created.id}`);
     } catch (error) {
       if (error instanceof ApiError) {
@@ -220,19 +225,4 @@ export function BriefingForm() {
       </CardContent>
     </Card>
   );
-}
-
-/**
- * Hash do briefing para usar como `Idempotency-Key`.
- *
- * SHA-256 via Web Crypto: disponível no navegador e determinístico, então o
- * mesmo briefing sempre gera a mesma chave.
- */
-async function digest(value: string): Promise<string> {
-  const bytes = new TextEncoder().encode(value);
-  const hash = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("")
-    .slice(0, 64);
 }

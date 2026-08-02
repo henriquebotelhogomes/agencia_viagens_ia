@@ -40,8 +40,11 @@ describe("useExecutionStream", () => {
     const { result } = renderHook(() => useExecutionStream(EXECUTION_ID));
     const source = MockEventSource.instances[0];
 
-    source.emit(progress("running", "cache", "consultando cache"));
-    source.emit(progress("running", "orquestracao", "agentes trabalhando"));
+    source.emit("progress", progress("running", "cache", "consultando cache"));
+    source.emit(
+      "progress",
+      progress("running", "orquestracao", "agentes trabalhando"),
+    );
 
     await waitFor(() => {
       expect(result.current.events).toHaveLength(2);
@@ -54,7 +57,7 @@ describe("useExecutionStream", () => {
     const { result } = renderHook(() => useExecutionStream(EXECUTION_ID));
     const source = MockEventSource.instances[0];
 
-    source.emit(progress("succeeded", "concluido", "pronto"));
+    source.emit("progress", progress("succeeded", "concluido", "pronto"));
 
     await waitFor(() => {
       expect(result.current.status).toBe("succeeded");
@@ -68,8 +71,8 @@ describe("useExecutionStream", () => {
     const { result } = renderHook(() => useExecutionStream(EXECUTION_ID));
     const source = MockEventSource.instances[0];
 
-    source.emit({ status: "isso-nao-existe" });
-    source.emit(progress("running", "cache"));
+    source.emit("progress", { status: "isso-nao-existe" });
+    source.emit("progress", progress("running", "cache"));
 
     await waitFor(() => {
       expect(result.current.events).toHaveLength(1);
@@ -118,5 +121,37 @@ describe("useExecutionStream", () => {
     unmount();
 
     expect(source.readyState).toBe(MockEventSource.CLOSED);
+  });
+
+  it("descarta JSON malformado sem interromper o stream", async () => {
+    const { result } = renderHook(() => useExecutionStream(EXECUTION_ID));
+    const source = MockEventSource.instances[0];
+
+    source.emit("progress", "{not valid JSON");
+    source.emit("progress", progress("running", "cache"));
+
+    await waitFor(() => {
+      expect(result.current.events).toHaveLength(1);
+    });
+  });
+
+  it("limpa o estado anterior ao acompanhar outra execuÃ§Ã£o", async () => {
+    const secondId = "4f9a1c2e-0000-4000-8000-000000000000";
+    const { result, rerender } = renderHook(
+      ({ id }) => useExecutionStream(id),
+      { initialProps: { id: EXECUTION_ID } },
+    );
+    MockEventSource.instances[0].emit(
+      "progress",
+      progress("running", "orquestracao"),
+    );
+    await waitFor(() => expect(result.current.events).toHaveLength(1));
+
+    rerender({ id: secondId });
+
+    await waitFor(() => {
+      expect(result.current.events).toEqual([]);
+      expect(result.current.status).toBe("queued");
+    });
   });
 });

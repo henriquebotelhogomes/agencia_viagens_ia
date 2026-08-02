@@ -21,12 +21,10 @@ vi.mock("@/lib/api/client", async (importOriginal) => {
   };
 });
 
-/** Web Crypto não existe no jsdom; a chave só precisa ser determinística. */
+/** Web Crypto não existe no jsdom; simulamos uma chave aleatória por envio. */
 function stubCrypto() {
   vi.stubGlobal("crypto", {
-    subtle: {
-      digest: async () => new Uint8Array([1, 2, 3, 4]).buffer,
-    },
+    randomUUID: vi.fn(() => "request-uuid-123"),
   });
 }
 
@@ -70,7 +68,7 @@ describe("BriefingForm", () => {
     });
   });
 
-  it("envia uma chave de idempotência", async () => {
+  it("envia uma chave de idempotência aleatória por envio", async () => {
     const user = userEvent.setup();
     createExecution.mockResolvedValue({ id: "x", status: "queued", stream_url: "" });
     render(<BriefingForm />);
@@ -79,9 +77,34 @@ describe("BriefingForm", () => {
     await user.click(screen.getByRole("button", { name: /planejar roteiro/i }));
 
     await waitFor(() => {
-      // Sem a chave, reenviar o formulário geraria custo duplicado
-      expect(createExecution.mock.calls[0][1]).toBeTruthy();
+      expect(createExecution.mock.calls[0][1]).toBe("request-uuid-123");
     });
+  });
+
+  it("reutiliza a chave ao repetir o mesmo briefing após uma falha", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("crypto", {
+      randomUUID: vi
+        .fn()
+        .mockReturnValueOnce("first-request-uuid")
+        .mockReturnValueOnce("second-request-uuid"),
+    });
+    createExecution
+      .mockRejectedValueOnce(new ApiError("Serviço indisponível", 503))
+      .mockResolvedValueOnce({ id: "retry-ok", status: "queued", stream_url: "" });
+    render(<BriefingForm />);
+
+    await preencher(user);
+    const submit = screen.getByRole("button", { name: /planejar roteiro/i });
+    await user.click(submit);
+    await screen.findByRole("alert");
+    await user.click(submit);
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/executions/retry-ok"));
+    expect(createExecution.mock.calls.map((call) => call[1])).toEqual([
+      "first-request-uuid",
+      "first-request-uuid",
+    ]);
   });
 
   it("bloqueia o envio e mostra erro quando falta o destino", async () => {

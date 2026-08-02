@@ -43,6 +43,18 @@ export function useExecutionStream(
   const [status, setStatus] = useState<ExecutionStatus>(initialStatus);
   const [connected, setConnected] = useState(false);
   const [streamError, setStreamError] = useState<string>();
+  const [streamExecutionId, setStreamExecutionId] = useState(executionId);
+
+  // A navegação entre execuções reutiliza este componente cliente; não deixe
+  // os eventos/status da execução anterior aparecerem no roteiro novo. O reset
+  // durante a renderização evita uma pintura intermediária com dados obsoletos.
+  if (streamExecutionId !== executionId) {
+    setStreamExecutionId(executionId);
+    setEvents([]);
+    setStatus(initialStatus);
+    setConnected(false);
+    setStreamError(undefined);
+  }
 
   useEffect(() => {
     // Execução já finalizada: nada a transmitir
@@ -57,8 +69,16 @@ export function useExecutionStream(
       setStreamError(undefined);
     };
 
-    source.onmessage = (message) => {
-      const parsed = progressEventSchema.safeParse(JSON.parse(message.data));
+    // O backend emite `event: progress`; `onmessage` só recebe o evento SSE
+    // padrão `message`, portanto não acompanha este fluxo nomeado.
+    const handleProgress = (message: MessageEvent<string>) => {
+      let data: unknown;
+      try {
+        data = JSON.parse(message.data);
+      } catch {
+        return;
+      }
+      const parsed = progressEventSchema.safeParse(data);
       if (!parsed.success) {
         // Evento fora do contrato: ignora em vez de derrubar a tela
         return;
@@ -73,6 +93,7 @@ export function useExecutionStream(
         setConnected(false);
       }
     };
+    source.addEventListener("progress", handleProgress);
 
     source.onerror = () => {
       setConnected(false);
@@ -85,6 +106,7 @@ export function useExecutionStream(
     };
 
     return () => {
+      source.removeEventListener("progress", handleProgress);
       source.close();
     };
   }, [executionId, initialStatus]);

@@ -58,12 +58,8 @@ export function ExecutionView({ executionId, initial }: ExecutionViewProps) {
 
   /** Rollback: cria nova versão e navega para ela. */
   const handleRollback = async (targetExecutionId: string) => {
-    try {
-      const created = await api.rollback(executionId, targetExecutionId);
-      router.push(`/executions/${created.id}`);
-    } catch {
-      // Erro é silencioso aqui; o VersionHistory mostra o estado
-    }
+    const created = await api.rollback(executionId, targetExecutionId);
+    router.push(`/executions/${created.id}`);
   };
 
   return (

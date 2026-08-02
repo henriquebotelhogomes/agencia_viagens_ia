@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -125,7 +125,12 @@ describe("VersionHistory", () => {
 
   it("chama onRollback ao clicar em restaurar", async () => {
     getVersions.mockResolvedValue(VERSIONS_RESPONSE);
-    const onRollback = vi.fn();
+    let resolveRollback: (() => void) | undefined;
+    const onRollback = vi.fn(
+      () => new Promise<void>((resolve) => {
+        resolveRollback = resolve;
+      }),
+    );
 
     render(
       <VersionHistory
@@ -140,5 +145,9 @@ describe("VersionHistory", () => {
     fireEvent.click(button);
 
     expect(onRollback).toHaveBeenCalledWith("exec-1");
+    expect(button).toBeDisabled();
+
+    resolveRollback?.();
+    await waitFor(() => expect(button).not.toBeDisabled());
   });
 });

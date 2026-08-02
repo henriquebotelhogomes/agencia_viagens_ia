@@ -25,7 +25,7 @@ const KIND_COLORS: Record<ExecutionKind, string> = {
 interface VersionHistoryProps {
   executionId: string;
   currentVersion: number;
-  onRollback: (targetExecutionId: string) => void;
+  onRollback: (targetExecutionId: string) => Promise<void>;
 }
 
 /**
@@ -45,13 +45,17 @@ export function VersionHistory({
   });
 
   const [rollingBack, setRollingBack] = useState<string | null>(null);
+  const [rollbackError, setRollbackError] = useState<string | null>(null);
 
   if (!versionList || versionList.versions.length <= 1) return null;
 
   const handleRollback = async (version: VersionSummary) => {
     setRollingBack(version.id);
+    setRollbackError(null);
     try {
-      onRollback(version.id);
+      await onRollback(version.id);
+    } catch {
+      setRollbackError("Não foi possível restaurar esta versão. Tente novamente.");
     } finally {
       setRollingBack(null);
     }
@@ -113,6 +117,11 @@ export function VersionHistory({
             </li>
           ))}
         </ul>
+        {rollbackError ? (
+          <p role="alert" className="mt-3 text-xs text-destructive">
+            {rollbackError}
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   );
