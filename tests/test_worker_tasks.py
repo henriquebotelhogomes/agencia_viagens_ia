@@ -282,6 +282,21 @@ async def test_cancelled_execution_is_not_processed(
     crew.assert_not_called()
 
 
+async def test_running_execution_is_not_processed_twice(
+    mocker, session_factory, worker_env
+) -> None:
+    """Um job duplicado não pode executar novamente uma execução já em andamento."""
+    execution_id = await _create_execution(
+        session_factory, status=ExecutionStatus.RUNNING
+    )
+    crew = mocker.patch("src.worker.tasks.CrewBuilder")
+
+    result = await tasks.generate_itinerary({}, execution_id=str(execution_id))
+
+    assert result == ExecutionStatus.RUNNING.value
+    crew.assert_not_called()
+
+
 async def test_usage_is_not_recorded_without_tokens(
     mocker, session_factory, worker_env
 ) -> None:
