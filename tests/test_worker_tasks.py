@@ -5,6 +5,7 @@ de estados da execução, a persistência do resultado e o registro de custo rea
 Inclui testes dos caminhos de refine (FR-40) e rollback (FR-41).
 """
 
+import asyncio
 import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
@@ -229,6 +230,31 @@ async def test_crew_failure_marks_execution_failed(
         assert execution is not None
         assert execution.status == ExecutionStatus.FAILED
         assert "gateways falharam" in (execution.error_message or "")
+        assert execution.finished_at is not None
+
+
+async def test_timeout_abort_marks_execution_failed(
+    mocker, session_factory, worker_env
+) -> None:
+    """Aborto por timeout do SAQ (CancelledError) não deixa a execução pendurada.
+
+    O SAQ cancela a task quando o job estoura ``JOB_TIMEOUT_SECONDS``.
+    ``CancelledError`` é ``BaseException``; se não for tratado explicitamente,
+    a execução fica ``running`` para sempre no banco (spinner infinito).
+    """
+    execution_id = await _create_execution(session_factory)
+    builder = mocker.patch("src.worker.tasks.CrewBuilder").return_value
+    builder.run.side_effect = asyncio.CancelledError()
+    builder.use_fallback = False
+
+    with pytest.raises(asyncio.CancelledError):
+        await tasks.generate_itinerary({}, execution_id=str(execution_id))
+
+    async with session_factory() as session:
+        execution = await session.get(Execution, execution_id)
+        assert execution is not None
+        assert execution.status == ExecutionStatus.FAILED
+        assert "timeout" in (execution.error_message or "")
         assert execution.finished_at is not None
 
 

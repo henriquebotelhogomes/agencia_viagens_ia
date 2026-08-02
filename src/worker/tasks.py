@@ -100,6 +100,23 @@ async def _run_job(
                 return await _run_refine(session, execution, progress, started)
             return await _run_initial(session, execution, progress, started)
 
+        except asyncio.CancelledError:
+            # O SAQ aborta jobs que estouram ``JOB_TIMEOUT_SECONDS`` cancelando
+            # a task. ``CancelledError`` deriva de ``BaseException`` (não de
+            # ``Exception``): sem este ramo ele passaria direto pelo handler
+            # comum e a execução ficaria ``running`` para sempre no banco —
+            # spinner infinito para o usuário. Registramos a falha e propagamos
+            # o cancelamento para o SAQ concluir o aborto.
+            logger.warning(f"Execução {execution_id} abortada por timeout do worker.")
+            try:
+                execution.status = ExecutionStatus.FAILED
+                execution.error_message = "Abortada por timeout do worker."
+                execution.duration_seconds = round(time.perf_counter() - started, 2)
+                execution.finished_at = datetime.now(UTC)
+                await session.commit()
+            except Exception:  # limpeza não pode mascarar o cancelamento
+                pass
+            raise
         except Exception as e:
             # `exception=True` inclui o stack trace: sem ele, só se sabe *que*
             # falhou, não *onde* — diagnosticar em produção fica impossível.
