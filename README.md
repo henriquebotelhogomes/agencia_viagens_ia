@@ -12,13 +12,15 @@
 > · **API:** [voyager-ia-d97e5ffe11f1.herokuapp.com/health](https://voyager-ia-d97e5ffe11f1.herokuapp.com/health)
 > · **Documentação técnica:** [henriquebotelhogomes.github.io/agencia_viagens_ia](https://henriquebotelhogomes.github.io/agencia_viagens_ia/)
 
+> **📌 Projeto de portfólio:** caso de estudo de Engenharia de IA construído e operado com rigor de produção real — não é um produto comercial. Ver [escopo](#️-escopo-projeto-de-portfólio).
+
 ---
 
 ## 🎯 O que é
 
 Um **sistema autônomo de planejamento de viagens** que orquestra três agentes de IA especializados — um guia local, um analista de logística e um arquiteto de roteiros — para produzir um itinerário completo: pesquisa atrações em tempo real, calcula custos reais na moeda escolhida, geolocaliza cada ponto no mapa e audita o próprio custo de operação (FinOps).
 
-Diferente de um "wrapper" de API, cada decisão de engenharia foi tomada como se o sistema fosse para produção enterprise — porque foi.
+Este é um **projeto de portfólio**: diferente de um "wrapper" de API, cada decisão de engenharia foi tomada como se o sistema fosse para produção enterprise — porque foi. O objetivo é demonstrar, com um caso real e auditável, como se constrói e opera software de IA com rigor: arquitetura documentada, testes, observabilidade e custo como requisito.
 
 ### Por que não usar apenas o ChatGPT?
 
@@ -265,6 +267,15 @@ uv run mkdocs serve           # http://localhost:8000
 | [**PRD.md**](PRD.md) | Escopo, decisões de produto e roadmap |
 | [**specs/**](specs/README.md) | Especificações funcionais, técnicas e de UX |
 | [**CONTRIBUTING.md**](CONTRIBUTING.md) | Padrões de código e fluxo de PR |
+
+---
+
+## ⚠️ Escopo: projeto de portfólio
+
+- **Propósito demonstrativo** — concebido, construído e operado como caso de estudo de Engenharia de IA e Sistemas Distribuídos; não é um produto ou serviço comercial.
+- **Demo pública sem garantias** — a demo está no ar para avaliação, sem SLA ou garantia de disponibilidade, e pode ser descontinuada.
+- **Autenticação é non-goal deliberado** — a demo é protegida apenas por rate limiting de IP (ver [ADR-0004](docs/adr/0004-autenticacao.md)); não insira dados pessoais sensíveis.
+- **Manutenção em ritmo pessoal** — evolução e correções acontecem no tempo do autor; issues e sugestões são bem-vindas.
 
 ---
 
