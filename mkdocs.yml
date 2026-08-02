@@ -115,6 +115,7 @@ nav:
       - ADR-0014 Fila SAQ: adr/0014-fila-saq.md
       - ADR-0015 Hospedagem Heroku: adr/0015-hospedagem-heroku.md
       - ADR-0016 Internacionalização: adr/0016-i18n.md
+      - ADR-0017 Versionamento de roteiro: adr/0017-versionamento-roteiro.md
   - Operação:
       - Deploy: operations/deploy.md
       - Observabilidade: operations/observability.md

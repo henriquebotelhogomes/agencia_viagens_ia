@@ -246,6 +246,12 @@ ser 2 em produção.
 
 1. Está escalado? `heroku ps` deve listar `worker.1`.
 2. Dormindo? Acesse a aplicação para acordar os dynos.
+3. Dyno "up" mas sem logs de processamento? A rede da plataforma pode derrubar
+   a conexão Redis do polling silenciosamente. Os clientes do projeto usam
+   `socket_keepalive` + `health_check_interval` para reconectar sozinhos
+   (`src/services/redis_client.py`); se ainda assim ocorrer, a medida paliativa é
+   `heroku ps:restart worker --app voyager-ia` — os jobs ficam na fila e são
+   processados após o restart.
 
 ### `CERTIFICATE_VERIFY_FAILED` durante a geração
 
