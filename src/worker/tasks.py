@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 
 from src.api.schemas import ProgressEvent
 from src.config import get_settings
@@ -83,14 +83,33 @@ async def _run_job(
             logger.error(f"Execução {execution_id} não encontrada; job descartado.")
             return ExecutionStatus.FAILED.value
 
-        if execution.status == ExecutionStatus.CANCELLED:
-            logger.info(f"Execução {execution_id} já cancelada; job ignorado.")
-            return ExecutionStatus.CANCELLED.value
-
         started = time.perf_counter()
-        execution.status = ExecutionStatus.RUNNING
-        execution.started_at = datetime.now(UTC)
+        claimed = await session.execute(
+            update(Execution)
+            .where(
+                Execution.id == exec_uuid,
+                Execution.status == ExecutionStatus.QUEUED,
+            )
+            .values(status=ExecutionStatus.RUNNING, started_at=datetime.now(UTC))
+        )
+        if claimed.rowcount != 1:
+            # Só a transição queued -> running permite processar o job. Isso
+            # protege tanto o cancelamento concorrente quanto entregas duplicadas
+            # da fila, que nunca devem gerar dois roteiros para a mesma execução.
+            await session.rollback()
+            current_status = await session.scalar(
+                select(Execution.status).where(Execution.id == exec_uuid)
+            )
+            if current_status is None:
+                logger.error(f"Execução {execution_id} removida; job descartado.")
+                return ExecutionStatus.FAILED.value
+            logger.info(
+                f"Execução {execution_id} está em {current_status.value}; job ignorado."
+            )
+            return current_status.value
+
         await session.commit()
+        await session.refresh(execution)
         await _publish(progress, execution, "Execução iniciada.", STEP_ORCHESTRATION)
 
         try:
