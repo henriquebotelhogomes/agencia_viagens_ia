@@ -105,7 +105,15 @@ export function BriefingForm() {
   return (
     <Card className="shadow-md">
       <CardContent className="pt-5">
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
+        {/* A chamada a handleSubmit fica no handler (não no render): onSubmit
+            lê o ref de idempotência, e a regra react-hooks/refs veta passar
+            ao render uma função que possa ler ref. */}
+        <form
+          onSubmit={(event) => {
+            void handleSubmit(onSubmit)(event);
+          }}
+          className="flex flex-col gap-5"
+        >
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label="Saindo de" error={errors.origem?.message}>
               {(a11y) => (

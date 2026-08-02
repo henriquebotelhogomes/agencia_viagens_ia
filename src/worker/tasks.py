@@ -97,7 +97,9 @@ async def _run_job(
             # protege tanto o cancelamento concorrente quanto entregas duplicadas
             # da fila, que nunca devem gerar dois roteiros para a mesma execução.
             await session.rollback()
-            current_status = await session.scalar(
+            # Anotação explícita: sem ela o mypy infere Any do scalar
+            # e o `.value` abaixo vira retorno Any (no-any-return).
+            current_status: ExecutionStatus | None = await session.scalar(
                 select(Execution.status).where(Execution.id == exec_uuid)
             )
             if current_status is None:
