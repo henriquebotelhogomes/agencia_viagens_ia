@@ -87,6 +87,11 @@ asyncio_mode = "auto"
 
 [tool.coverage.run]
 source = ["src"]
+# Core sysmon (Python 3.12+): o core padrão (settrace) perde o rastreio após
+# `await` em drivers com thread interna (aiosqlite nos testes), deixando
+# código exercitado contado como descoberto. Sysmon usa sys.monitoring e não
+# sofre dessa perda — sem ele, a cobertura real de ~93% media ~89%.
+core = "sysmon"
 
 [tool.coverage.report]
 # Gate de cobertura (PRD §8.1): abaixo disso o CI falha. Atual: ~96%.
