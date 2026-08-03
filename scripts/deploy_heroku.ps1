@@ -76,6 +76,34 @@ Write-Host "   release concluido" -ForegroundColor Green
 Write-Host "`n== Estado dos dynos ==" -ForegroundColor Cyan
 heroku ps --app $App 2>&1 | Out-String | Write-Host
 
-Write-Host "`nVerifique a saude da aplicacao:" -ForegroundColor Cyan
-Write-Host "  curl https://$App.herokuapp.com/health"
+$HealthUrl = "https://$App.herokuapp.com/health"
+$HealthAttempts = 12
+$HealthRetryDelaySeconds = 5
+$healthy = $false
+
+Write-Host "`n== Verificando saude da aplicacao ==" -ForegroundColor Cyan
+for ($attempt = 1; $attempt -le $HealthAttempts; $attempt++) {
+    try {
+        $health = Invoke-RestMethod -Uri "$HealthUrl" -TimeoutSec 10 -ErrorAction Stop
+        if ($health.status -eq "ok" -and $health.dependencies.database -and $health.dependencies.queue) {
+            Write-Host "   API, banco e fila estao saudaveis" -ForegroundColor Green
+            $healthy = $true
+            break
+        }
+        $reason = "status=$($health.status), database=$($health.dependencies.database), queue=$($health.dependencies.queue)"
+    } catch {
+        $reason = $_.Exception.Message
+    }
+
+    if ($attempt -lt $HealthAttempts) {
+        Write-Host "   tentativa $attempt/$HealthAttempts falhou: $reason; tentando novamente em $HealthRetryDelaySeconds s" -ForegroundColor Yellow
+        Start-Sleep -Seconds $HealthRetryDelaySeconds
+    }
+}
+
+if (-not $healthy) {
+    throw "A API nao ficou saudavel apos $HealthAttempts tentativas: $reason"
+}
+
+Write-Host "`nSmoke test opcional (usa LLM e servicos externos reais):" -ForegroundColor Cyan
 Write-Host "  uv run python -m scripts.e2e_smoke --base-url https://$App.herokuapp.com"

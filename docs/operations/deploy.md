@@ -171,6 +171,11 @@ curl https://voyager-ia-d97e5ffe11f1.herokuapp.com/health
 uv run python -m scripts.e2e_smoke --base-url https://voyager-ia-d97e5ffe11f1.herokuapp.com
 ```
 
+`deploy_heroku.ps1` executa automaticamente o healthcheck após o release e só
+termina com sucesso quando a API reporta `status: ok` e `database`/`queue` estão
+disponíveis. O smoke test permanece manual porque consome LLM e serviços
+externos reais.
+
 ## 7. Frontend (app `voyager-web`)
 
 O frontend é um **segundo app** no Heroku (cada app tem um único processo

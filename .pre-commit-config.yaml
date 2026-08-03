@@ -7,15 +7,18 @@ repos:
     -   id: end-of-file-fixer
     -   id: trailing-whitespace
 
--   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.3.7
-    hooks:
-    -   id: ruff
-        args: [ --fix, --exit-non-zero-on-fix ]
-    -   id: ruff-format
-
 -   repo: local
     hooks:
+    -   id: ruff-check
+        name: ruff check
+        entry: uv run ruff check src/ tests/ scripts/ alembic/
+        language: system
+        pass_filenames: false
+    -   id: ruff-format-check
+        name: ruff format check
+        entry: uv run ruff format src/ tests/ scripts/ alembic/ --check
+        language: system
+        pass_filenames: false
     -   id: mypy
         name: mypy
         entry: uv run mypy src/ --strict

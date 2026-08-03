@@ -137,8 +137,8 @@ Container ou serviço reinicia; healthcheck falha.
 ### Diagnóstico
 
 ```bash
-# Healthcheck do Streamlit
-curl http://localhost:8501/_stcore/health
+# Healthcheck da API
+curl http://localhost:8000/health
 
 # Imports do domínio funcionam?
 docker run --rm voyager-ai python -c "import src.crew_builder, src.runtime; print('ok')"
@@ -150,5 +150,5 @@ docker run --rm voyager-ai python -c "import src.crew_builder, src.runtime; prin
   mensagem do Pydantic, ela indica o campo.
 - **Falha de import**: normalmente versão de dependência; confirme que a imagem
   foi construída com o `uv.lock` atual.
-- **Cold start no free tier do Render**: primeira requisição pode levar segundos.
-  Não é incidente.
+- **Cold start no plano Eco do Heroku**: a primeira requisição após o
+  adormecimento pode levar segundos. Não é incidente.
