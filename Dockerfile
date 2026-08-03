@@ -43,6 +43,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen
 
 COPY tests/ tests/
+# Testes de contrato leem o script de deploy; a imagem de CI precisa conter o
+# mesmo artefato versionado que será executado fora do container.
+COPY scripts/ scripts/
 
 ENV PATH="/app/.venv/bin:$PATH"
 
