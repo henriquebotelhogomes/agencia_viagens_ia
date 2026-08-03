@@ -9,11 +9,13 @@ import asyncio
 import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from src.config import Settings
 from src.db.base import Base
 from src.db.models import (
     Execution,
@@ -282,6 +284,14 @@ async def test_timeout_abort_marks_execution_failed(
         assert "timeout" in (execution.error_message or "")
         assert execution.finished_at is not None
 
+    published = [
+        call.args[0] for call in worker_env["progress"].publish.await_args_list
+    ]
+    assert any(
+        event.status == ExecutionStatus.FAILED and event.step == tasks.STEP_DONE
+        for event in published
+    )
+
 
 async def test_missing_execution_is_discarded(
     mocker, session_factory, worker_env
@@ -338,16 +348,58 @@ async def test_usage_is_not_recorded_without_tokens(
 
 
 async def test_find_stale_executions_lists_running(mocker, session_factory) -> None:
-    """Diagnóstico operacional: identifica execuções presas em `running`."""
+    """Diagnóstico operacional ignora jobs ainda dentro da janela de timeout."""
     mocker.patch("src.worker.tasks.get_session_factory", return_value=session_factory)
-    running_id = await _create_execution(
-        session_factory, status=ExecutionStatus.RUNNING
+    mocker.patch(
+        "src.worker.tasks.get_settings",
+        return_value=Settings(_env_file=None, JOB_TIMEOUT_SECONDS=60),
+    )
+    stale_id = await _create_execution(
+        session_factory,
+        status=ExecutionStatus.RUNNING,
+        started_at=datetime.now(UTC) - timedelta(seconds=61),
+    )
+    await _create_execution(
+        session_factory,
+        status=ExecutionStatus.RUNNING,
+        started_at=datetime.now(UTC),
     )
     await _create_execution(session_factory, status=ExecutionStatus.SUCCEEDED)
 
     stale = await tasks.find_stale_executions()
 
-    assert stale == [running_id]
+    assert stale == [stale_id]
+
+
+async def test_recover_stale_executions_marks_only_expired_jobs_failed(
+    mocker, session_factory
+) -> None:
+    """Um restart do worker encerra jobs running que excederam seu timeout."""
+    mocker.patch("src.worker.tasks.get_session_factory", return_value=session_factory)
+    mocker.patch(
+        "src.worker.tasks.get_settings",
+        return_value=Settings(_env_file=None, JOB_TIMEOUT_SECONDS=60),
+    )
+    expired_id = await _create_execution(
+        session_factory,
+        status=ExecutionStatus.RUNNING,
+        started_at=datetime.now(UTC) - timedelta(seconds=61),
+    )
+    current_id = await _create_execution(
+        session_factory,
+        status=ExecutionStatus.RUNNING,
+        started_at=datetime.now(UTC),
+    )
+
+    recovered = await tasks.recover_stale_executions()
+
+    assert recovered == [expired_id]
+    async with session_factory() as session:
+        expired = await session.get(Execution, expired_id)
+        current = await session.get(Execution, current_id)
+        assert expired is not None and expired.status == ExecutionStatus.FAILED
+        assert "timeout" in (expired.error_message or "")
+        assert current is not None and current.status == ExecutionStatus.RUNNING
 
 
 # ---------------------------------------------------------------------------

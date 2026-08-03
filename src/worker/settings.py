@@ -22,7 +22,7 @@ from src.runtime import configure_llm_runtime  # noqa: E402
 from src.services.queue_service import build_queue  # noqa: E402
 from src.telemetry import configure_telemetry  # noqa: E402
 from src.utils.logger import setup_logger  # noqa: E402
-from src.worker.tasks import generate_itinerary  # noqa: E402
+from src.worker.tasks import generate_itinerary, recover_stale_executions  # noqa: E402
 
 
 async def startup(ctx: dict[str, Any]) -> None:  # noqa: ARG001 - assinatura do SAQ
@@ -31,6 +31,11 @@ async def startup(ctx: dict[str, Any]) -> None:  # noqa: ARG001 - assinatura do 
     setup_logger(app_settings)
     configure_llm_runtime(app_settings)
     configure_telemetry(app_settings, service_name="voyager-worker")
+    recovered = await recover_stale_executions()
+    if recovered:
+        logger.warning(
+            f"{len(recovered)} execução(ões) vencida(s) recuperada(s) após restart."
+        )
     logger.info(
         f"Worker iniciado (env={app_settings.APP_ENV}, fila={app_settings.QUEUE_NAME})"
     )

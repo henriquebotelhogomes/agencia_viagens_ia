@@ -70,7 +70,9 @@ class ProgressBus:
         except Exception as e:
             logger.warning(f"Falha ao publicar progresso: {e}")
 
-    async def subscribe(self, execution_id: uuid.UUID) -> AsyncIterator[ProgressEvent]:
+    async def subscribe(
+        self, execution_id: uuid.UUID
+    ) -> AsyncIterator[ProgressEvent | None]:
         """Itera sobre os eventos de uma execução até o estado terminal."""
         client = await self._get_client()
         if client is None:
@@ -84,7 +86,8 @@ class ProgressBus:
                     ignore_subscribe_messages=True, timeout=HEARTBEAT_SECONDS
                 )
                 if message is None:
-                    continue  # timeout: quem consome decide enviar heartbeat
+                    yield None  # quem consome reconcilia o estado persistido
+                    continue
                 try:
                     event = ProgressEvent.model_validate_json(message["data"])
                 except ValueError as e:

@@ -340,6 +340,30 @@ async def test_stream_relays_progress_events(
     assert "Roteiro concluído" in payload
 
 
+async def test_stream_reconciles_terminal_status_after_missing_pubsub_event(
+    db_session: AsyncSession,
+) -> None:
+    """Se o worker morrer sem publicar, o SSE ainda entrega a falha persistida."""
+    from src.api.routers import executions as execution_routes
+
+    execution = await _persist_execution(db_session, status=ExecutionStatus.RUNNING)
+
+    class SilentBus:
+        async def subscribe(self, execution_id: uuid.UUID):
+            execution.status = ExecutionStatus.FAILED
+            await db_session.commit()
+            yield None
+
+    events = [
+        event
+        async for event in execution_routes._event_generator(
+            execution, SilentBus(), db_session
+        )
+    ]
+
+    assert '"status":"failed"' in events[-1]["data"]
+
+
 # ---------------------------------------------------------------------------
 # POST /v1/executions/{id}/refine (FR-40)
 # ---------------------------------------------------------------------------

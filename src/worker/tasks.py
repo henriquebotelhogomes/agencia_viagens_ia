@@ -7,7 +7,7 @@ A API nunca executa a crew; o worker nunca conhece HTTP.
 import asyncio
 import time
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from loguru import logger
@@ -144,6 +144,12 @@ async def _run_job(
                 execution.duration_seconds = round(time.perf_counter() - started, 2)
                 execution.finished_at = datetime.now(UTC)
                 await session.commit()
+                await _publish(
+                    progress,
+                    execution,
+                    "Geração interrompida por timeout do worker.",
+                    STEP_DONE,
+                )
             except Exception:  # limpeza não pode mascarar o cancelamento
                 pass
             raise
@@ -446,9 +452,49 @@ async def _publish(
 
 async def find_stale_executions() -> list[uuid.UUID]:
     """Lista execuções presas em `running` (diagnóstico operacional)."""
+    cutoff = datetime.now(UTC) - timedelta(seconds=get_settings().JOB_TIMEOUT_SECONDS)
     session_factory = get_session_factory()
     async with session_factory() as session:
         rows = await session.scalars(
-            select(Execution.id).where(Execution.status == ExecutionStatus.RUNNING)
+            select(Execution.id).where(
+                Execution.status == ExecutionStatus.RUNNING,
+                Execution.started_at.is_not(None),
+                Execution.started_at < cutoff,
+            )
         )
         return list(rows)
+
+
+async def recover_stale_executions() -> list[uuid.UUID]:
+    """Marca como falhos jobs que sobreviveram além do timeout após um restart."""
+    settings = get_settings()
+    cutoff = datetime.now(UTC) - timedelta(seconds=settings.JOB_TIMEOUT_SECONDS)
+    session_factory = get_session_factory()
+    recovered: list[uuid.UUID] = []
+
+    async with session_factory() as session:
+        stale = list(
+            await session.scalars(
+                select(Execution).where(
+                    Execution.status == ExecutionStatus.RUNNING,
+                    Execution.started_at.is_not(None),
+                    Execution.started_at < cutoff,
+                )
+            )
+        )
+        for execution in stale:
+            started_at = execution.started_at
+            assert started_at is not None
+            if started_at.tzinfo is None:
+                started_at = started_at.replace(tzinfo=UTC)
+            execution.status = ExecutionStatus.FAILED
+            execution.error_message = "Abortada por timeout do worker."
+            execution.duration_seconds = round(
+                (datetime.now(UTC) - started_at).total_seconds(), 2
+            )
+            execution.finished_at = datetime.now(UTC)
+            recovered.append(execution.id)
+        if recovered:
+            await session.commit()
+
+    return recovered

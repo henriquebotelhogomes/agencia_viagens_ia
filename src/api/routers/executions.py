@@ -176,7 +176,7 @@ async def stream_execution(
     """
     execution = await _load_execution(session, execution_id)
     return EventSourceResponse(
-        _event_generator(execution, progress_bus),
+        _event_generator(execution, progress_bus, session),
         ping=int(HEARTBEAT_SECONDS),
     )
 
@@ -502,8 +502,10 @@ def _summarize_cost(records: list[UsageRecord], served_from_cache: bool) -> Cost
     )
 
 
-async def _event_generator(execution: Execution, progress_bus: ProgressBus) -> Any:
-    """Produz os eventos SSE: estado atual e, depois, o fluxo do pub/sub."""
+async def _event_generator(
+    execution: Execution, progress_bus: ProgressBus, session: AsyncSession
+) -> Any:
+    """Produz eventos SSE e reconcilia o banco quando o pub/sub fica silencioso."""
     current = ProgressEvent(
         execution_id=execution.id,
         status=execution.status,
@@ -516,4 +518,16 @@ async def _event_generator(execution: Execution, progress_bus: ProgressBus) -> A
         return
 
     async for event in progress_bus.subscribe(execution.id):
+        if event is None:
+            await session.refresh(execution)
+            if execution.is_terminal:
+                terminal = ProgressEvent(
+                    execution_id=execution.id,
+                    status=execution.status,
+                    message=f"Estado final reconciliado: {execution.status.value}",
+                    at=datetime.now(UTC),
+                )
+                yield {"event": "progress", "data": terminal.model_dump_json()}
+                return
+            continue
         yield {"event": "progress", "data": event.model_dump_json()}
