@@ -203,6 +203,13 @@ jobs:
       - name: Build production image (runtime non-root)
         run: docker build --target runtime -t agencia-viagens-ia .
 
+      - name: Imagem inicia com o usuário padrão
+        # O Compose usa o USER definido no Dockerfile; valide também esse
+        # caminho, além do UID arbitrário usado pela plataforma gerenciada.
+        run: |
+          docker run --rm agencia-viagens-ia \
+            python -c "import src.worker.tasks; print('import do worker OK com usuário padrão')"
+
       - name: Imagem funciona com UID arbitrário (ADR-0015)
         # O Heroku ignora o `USER` do Dockerfile e roda com um UID aleatório e
         # GID 0. Sem um HOME gravável, o CrewAI falha no import ao criar o

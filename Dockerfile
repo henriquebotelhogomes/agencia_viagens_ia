@@ -79,7 +79,10 @@ RUN mkdir -p /app/.local/share /app/.cache /app/logs \
     && chgrp -R 0 /app \
     && chmod -R g=u /app
 
-USER app
+# A imagem também roda no Compose com o usuário padrão; mantenha o GID 0 para
+# acessar os diretórios preparados acima. Em Heroku o UID é substituído, mas o
+# GID 0 continua o mesmo.
+USER app:0
 
 # Sem CMD: `runtime` é a base comum — cada estágio de deploy (web/worker/
 # release) e o docker-compose definem o seu próprio comando.
