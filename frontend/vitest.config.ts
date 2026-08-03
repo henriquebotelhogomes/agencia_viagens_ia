@@ -34,9 +34,7 @@ export default defineConfig({
         "src/components/itinerary-map.tsx",
         // Wrapper de provider sem regra própria.
         "src/components/query-provider.tsx",
-        // Composição de tela e gráfico SVG: o valor está no fluxo real, exercitado
-        // pelo Playwright contra a API. Testar aqui mediria mocks, não o produto.
-        "src/components/execution-view.tsx",
+        // Gráfico SVG: o valor está no fluxo real, exercitado pelo Playwright.
         "src/components/cost-chart.tsx",
         "**/*.d.ts",
       ],
