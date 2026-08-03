@@ -44,7 +44,10 @@ export function ExecutionView({ executionId, initial }: ExecutionViewProps) {
     queryFn: () => api.getExecution(executionId),
     initialData: initial,
     enabled: finished,
-    staleTime: finished ? Infinity : 0,
+    // O estado final vem do SSE, mas o roteiro completo vem do banco. O
+    // detalhe inicial pode ser anterior ao término (sobretudo se o worker
+    // concluir antes da assinatura do stream), portanto precisa de refetch.
+    staleTime: 0,
   });
 
   const { data: geojson } = useQuery({

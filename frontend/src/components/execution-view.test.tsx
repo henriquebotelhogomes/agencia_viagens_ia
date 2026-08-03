@@ -135,7 +135,10 @@ describe("ExecutionView", () => {
 
     expect(screen.getByText("Worker excedeu o timeout.")).toBeInTheDocument();
     expect(screen.getByText("Conexão interrompida")).toBeInTheDocument();
-    expect(useQuery.mock.calls[0][0]).toMatchObject({ enabled: true, staleTime: Infinity });
+    expect(useQuery.mock.calls[0][0]).toMatchObject({
+      enabled: true,
+      staleTime: 0,
+    });
   });
 
   it("consulta e mostra o mapa somente para uma execução bem-sucedida", () => {
@@ -183,6 +186,10 @@ describe("ExecutionView", () => {
 
     render(<ExecutionView executionId={succeeded.id} initial={succeeded} />);
 
+    expect(useQuery.mock.calls[0][0]).toMatchObject({
+      enabled: true,
+      staleTime: 0,
+    });
     await useQuery.mock.calls[0][0].queryFn();
     await useQuery.mock.calls[1][0].queryFn();
     fireEvent.click(screen.getByRole("button", { name: /baixar roteiro/i }));
