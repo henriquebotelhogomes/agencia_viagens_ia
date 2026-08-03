@@ -37,6 +37,48 @@ Erro na orquestração; nenhum roteiro é produzido.
 
 ---
 
+## Roteiro permanece em "Consultando roteiros anteriores"
+
+### Sintoma
+
+A interface permanece em carregamento e a execução continua com status
+`running` por mais tempo que `JOB_TIMEOUT_SECONDS` (600 segundos por padrão).
+
+### Diagnóstico
+
+1. Veja os logs do worker e procure o ID da execução, erros e sinais de
+   cancelamento:
+
+   ```bash
+   heroku logs --tail --dyno worker --app voyager-ia
+   ```
+
+2. Liste somente as execuções que ultrapassaram o timeout configurado:
+
+   ```bash
+   heroku run "uv run python -c \"import asyncio; from src.worker.tasks import find_stale_executions; print(*asyncio.run(find_stale_executions()), sep='\\n')\"" --app voyager-ia
+   ```
+
+   Sem saída, não há execução vencida: investigue a execução pelo ID nos logs
+   e no trace do Langfuse. A função `find_stale_executions()` é apenas
+   diagnóstica e não altera dados.
+
+### Ação
+
+Para cada ID retornado, faça um restart controlado do worker:
+
+```bash
+heroku ps:restart worker --app voyager-ia
+```
+
+Na inicialização, o worker executa `recover_stale_executions()` e marca como
+`failed` somente as execuções vencidas. O cliente recebe o estado terminal no
+próximo ciclo do SSE e pode iniciar uma nova geração. Não reinicie o worker se
+nenhum ID tiver sido encontrado, pois isso não diagnostica uma execução ainda
+dentro da janela de timeout.
+
+---
+
 ## Mapa sem pins
 
 ### Sintoma
