@@ -7,7 +7,7 @@
 ############################################
 # Estágio 1: builder — deps de produção
 ############################################
-FROM python:3.12-slim-bookworm AS builder
+FROM python:3.14-slim-bookworm AS builder
 
 # Binário do uv a partir da imagem oficial
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
@@ -54,7 +54,7 @@ CMD ["pytest", "tests/", "-v"]
 ############################################
 # Estágio 3: runtime — produção non-root
 ############################################
-FROM python:3.12-slim-bookworm AS runtime
+FROM python:3.14-slim-bookworm AS runtime
 
 # Usuário sem privilégios (CIS Docker Benchmark)
 RUN groupadd --system app && useradd --system --gid app --create-home app
