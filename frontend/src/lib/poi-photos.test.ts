@@ -1,7 +1,12 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fetchPoiPhoto, inferCategory, usePoiPhotos } from "@/lib/poi-photos";
+import {
+  fetchPoiPhoto,
+  inferCategory,
+  type PoiPhotoInfo,
+  usePoiPhotos,
+} from "@/lib/poi-photos";
 
 describe("inferCategory", () => {
   it("identifica corretamente praias", () => {
