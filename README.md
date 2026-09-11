@@ -1,6 +1,7 @@
 # ✈️ Voyager AI — Planejamento de Viagens com IA Multiagente
 
 [![CI/CD Pipeline](https://github.com/henriquebotelhogomes/agencia_viagens_ia/actions/workflows/ci.yml/badge.svg)](https://github.com/henriquebotelhogomes/agencia_viagens_ia/actions)
+[![Live Demo](https://img.shields.io/badge/demo-live%20app-success.svg?style=flat&logo=googlecloud)](https://voyager-web-197215016090.us-central1.run.app/)
 [![Docs](https://img.shields.io/badge/docs-mkdocs%20material-blue.svg)](https://henriquebotelhogomes.github.io/agencia_viagens_ia/)
 [![Coverage](https://img.shields.io/badge/coverage-%E2%89%A590%25-brightgreen.svg)](https://github.com/henriquebotelhogomes/agencia_viagens_ia/actions)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
@@ -8,8 +9,10 @@
 [![Types: mypy strict](https://img.shields.io/badge/types-mypy%20strict-blue.svg)](https://mypy-lang.org/)
 [![Cloud: Google Cloud](https://img.shields.io/badge/cloud-google--cloud%20run-4285F4.svg)](https://cloud.google.com/run)
 
-> **✨ Deploy Serverless:** Google Cloud Run com Scale-to-Zero ($0/mês) · [ADR-0018](docs/adr/0018-hospedagem-gcp-cloud-run.md)
-> · **Documentação técnica:** [henriquebotelhogomes.github.io/agencia_viagens_ia](https://henriquebotelhogomes.github.io/agencia_viagens_ia/)
+> **🌐 Aplicação no Ar (Live Demo):** [https://voyager-web-197215016090.us-central1.run.app/](https://voyager-web-197215016090.us-central1.run.app/)  
+> **✨ Deploy Serverless:** Google Cloud Run com Scale-to-Zero ($0/mês) · [ADR-0018](docs/adr/0018-hospedagem-gcp-cloud-run.md)  
+> **📚 Documentação técnica:** [henriquebotelhogomes.github.io/agencia_viagens_ia](https://henriquebotelhogomes.github.io/agencia_viagens_ia/)  
+> **⚡ API & Documentação Scalar:** [https://voyager-api-197215016090.us-central1.run.app/docs](https://voyager-api-197215016090.us-central1.run.app/docs)
 
 > **📌 Projeto de portfólio:** caso de estudo de Engenharia de IA construído com práticas de produção — não é um produto comercial. Ver [escopo e limitações](#escopo-e-limitacoes).
 
@@ -53,6 +56,8 @@ Uma conversa genérica não oferece, por padrão, controle explícito sobre pesq
 ---
 
 ## 🖼️ O sistema em ação
+
+> **🔗 Experimente a aplicação em produção:** [https://voyager-web-197215016090.us-central1.run.app/](https://voyager-web-197215016090.us-central1.run.app/)
 
 ### 🎬 Demonstração Completa do Fluxo (Interativo)
 
@@ -318,7 +323,7 @@ uv run mkdocs serve --dev-addr=127.0.0.1:8001
 | Documento | Conteúdo |
 | :--- | :--- |
 | [**Documentação técnica**](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) | Arquitetura, C4, referência de API, runbook |
-| [**ADRs**](docs/adr/index.md) | 17 decisões arquiteturais com trade-offs |
+| [**ADRs**](docs/adr/index.md) | 18 decisões arquiteturais com trade-offs |
 | [**PRD.md**](PRD.md) | Escopo, decisões de produto e roadmap |
 | [**specs/**](specs/README.md) | Especificações funcionais, técnicas e de UX |
 | [**CONTRIBUTING.md**](CONTRIBUTING.md) | Padrões de código e fluxo de PR |
