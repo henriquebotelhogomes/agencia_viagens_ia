@@ -21,7 +21,7 @@ dependencies = [
     "pydantic-settings>=2.10,<3.0",
     "loguru>=0.7,<1.0",
     "redis>=7.4,<8.0",
-    "langfuse>=2.59,<3.0",
+    "langfuse>=2.59,<5.0",
     "tavily-python>=0.5,<1.0",
     # --- Fase 1: API + worker + persistência (PRD D6/D7/D8) ---
     "fastapi>=0.115,<1.0",
