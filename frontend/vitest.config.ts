@@ -32,8 +32,9 @@ export default defineConfig({
         "src/components/ui/**",
         // MapLibre exige WebGL, indisponível no jsdom — coberto no E2E.
         "src/components/itinerary-map.tsx",
-        // Wrapper de provider sem regra própria.
+        // Wrappers de provider sem regra própria.
         "src/components/query-provider.tsx",
+        "src/components/theme-provider.tsx",
         // Gráfico SVG: o valor está no fluxo real, exercitado pelo Playwright.
         "src/components/cost-chart.tsx",
         "**/*.d.ts",

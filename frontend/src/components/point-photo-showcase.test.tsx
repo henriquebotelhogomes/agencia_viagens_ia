@@ -71,4 +71,19 @@ describe("PointPhotoShowcase", () => {
 
     expect(handleScroll).toHaveBeenCalledWith("Praia de Copacabana");
   });
+
+  it("abre o modal detalhado ao clicar no card da foto", async () => {
+    const user = userEvent.setup();
+    render(<PointPhotoShowcase photos={MOCK_PHOTOS} />);
+
+    // Clica no card da Praia de Copacabana
+    const cardTitle = screen.getByText("Praia de Copacabana");
+    await user.click(cardTitle);
+
+    // O modal deve ser exibido com o papel de dialog
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Famosa praia da zona sul do Rio de Janeiro."),
+    ).toHaveLength(2);
+  });
 });

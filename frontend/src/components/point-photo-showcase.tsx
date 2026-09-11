@@ -1,11 +1,10 @@
 "use client";
 
-import { ArrowRight, Camera, ExternalLink, MapPin, Sparkles } from "lucide-react";
+import { ArrowRight, Camera, ExternalLink, MapPin } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 
 import { PointDetailModal } from "@/components/point-detail-modal";
-import { Card, CardContent } from "@/components/ui/card";
 import type { PoiPhotoInfo } from "@/lib/poi-photos";
 
 interface PointPhotoShowcaseProps {

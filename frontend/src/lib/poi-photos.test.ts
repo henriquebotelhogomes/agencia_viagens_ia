@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { renderHook, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { inferCategory } from "@/lib/poi-photos";
+import { fetchPoiPhoto, inferCategory, usePoiPhotos } from "@/lib/poi-photos";
 
 describe("inferCategory", () => {
   it("identifica corretamente praias", () => {
@@ -30,5 +31,79 @@ describe("inferCategory", () => {
     expect(inferCategory("Arcos da Lapa")).toBe("Cultura & História");
     expect(inferCategory("Museu do Amanhã")).toBe("Cultura & História");
     expect(inferCategory("Teatro Municipal")).toBe("Cultura & História");
+  });
+
+  it("retorna Geral para locais genéricos", () => {
+    expect(inferCategory("Passeio Aleatório")).toBe("Geral");
+  });
+});
+
+describe("fetchPoiPhoto", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("retorna foto da Wikipedia quando a API responde com sucesso", async () => {
+    const mockResponse = {
+      ok: true,
+      json: async () => ({
+        thumbnail: { source: "https://upload.wikimedia.org/cristo.jpg" },
+        extract: "O Cristo Redentor é uma estátua de Jesus Cristo no Rio.",
+      }),
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(mockResponse));
+
+    const photo = await fetchPoiPhoto("Cristo Redentor", "Rio de Janeiro");
+    expect(photo.source).toBe("wikipedia");
+    expect(photo.imageUrl).toBe("https://upload.wikimedia.org/cristo.jpg");
+    expect(photo.description).toContain("Cristo Redentor");
+  });
+
+  it("usa foto temática de fallback quando a Wikipedia falha ou não tem imagem", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+      }),
+    );
+
+    const photo = await fetchPoiPhoto("Praia Secreta Inexistente", "Florianópolis");
+    expect(photo.source).toBe("curated");
+    expect(photo.category).toBe("Praia");
+    expect(photo.imageUrl).toContain("images.unsplash.com");
+  });
+});
+
+describe("usePoiPhotos hook", () => {
+  it("retorna lista vazia e loading falso quando poiNames é vazio", () => {
+    const { result } = renderHook(() => usePoiPhotos([]));
+    expect(result.current.photos).toEqual({});
+    expect(result.current.loading).toBe(false);
+  });
+
+  it("carrega as fotos dos pontos fornecidos", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          thumbnail: { source: "https://upload.wikimedia.org/foto.jpg" },
+          extract: "Descrição do ponto",
+        }),
+      }),
+    );
+
+    const { result } = renderHook(() =>
+      usePoiPhotos(["Museu de Arte"], "São Paulo"),
+    );
+
+    await waitFor(() => {
+      expect(result.current.photos["Museu de Arte"]).toBeDefined();
+    });
+
+    expect(result.current.photos["Museu de Arte"].imageUrl).toBe(
+      "https://upload.wikimedia.org/foto.jpg",
+    );
   });
 });

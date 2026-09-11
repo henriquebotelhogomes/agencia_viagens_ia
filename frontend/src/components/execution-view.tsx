@@ -11,7 +11,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -62,7 +62,10 @@ export function ExecutionView({ executionId, initial }: ExecutionViewProps) {
     staleTime: Infinity,
   });
 
-  const poiNames = geojson?.features.map((f) => f.properties.name) ?? [];
+  const poiNames = useMemo(
+    () => geojson?.features.map((f) => f.properties.name) ?? [],
+    [geojson],
+  );
   const { photos } = usePoiPhotos(poiNames, execution.briefing.destino);
 
   const [highlighted, setHighlighted] = useState<string>();

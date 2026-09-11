@@ -241,16 +241,21 @@ export async function fetchPoiPhoto(
  */
 export function usePoiPhotos(poiNames: string[], destination = "") {
   const [photos, setPhotos] = useState<Record<string, PoiPhotoInfo>>({});
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!poiNames || poiNames.length === 0) {
-      setLoading(false);
       return;
     }
 
     let isMounted = true;
-    setLoading(true);
+
+    // Despacha carregamento de forma assíncrona para evitar efeito em cascata
+    const timeoutId = setTimeout(() => {
+      if (isMounted) {
+        setLoading(true);
+      }
+    }, 0);
 
     Promise.all(
       poiNames.map(async (name) => {
@@ -259,6 +264,7 @@ export function usePoiPhotos(poiNames: string[], destination = "") {
       }),
     ).then((results) => {
       if (!isMounted) return;
+      clearTimeout(timeoutId);
       const map: Record<string, PoiPhotoInfo> = {};
       for (const res of results) {
         map[res.name] = res.info;
@@ -269,8 +275,9 @@ export function usePoiPhotos(poiNames: string[], destination = "") {
 
     return () => {
       isMounted = false;
+      clearTimeout(timeoutId);
     };
-  }, [poiNames.join(","), destination]);
+  }, [poiNames, destination]);
 
   return { photos, loading };
 }

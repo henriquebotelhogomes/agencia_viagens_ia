@@ -38,10 +38,6 @@ export function HomePlannerSection() {
     }
   };
 
-  const handleClearDestination = () => {
-    setSelectedDestination(null);
-  };
-
   return (
     <div className="flex flex-col gap-16">
       {/* Vitrine Interativa de Destinos com Fotos */}
@@ -96,7 +92,6 @@ export function HomePlannerSection() {
           <div className="lg:sticky lg:top-24">
             <BriefingForm
               selectedDestination={selectedDestination}
-              onClearDestination={handleClearDestination}
             />
           </div>
         </div>

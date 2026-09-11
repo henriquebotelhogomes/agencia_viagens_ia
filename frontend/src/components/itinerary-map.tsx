@@ -102,7 +102,7 @@ export function ItineraryMap({ geojson, highlighted, photos }: ItineraryMapProps
       map.remove();
       mapRef.current = null;
     };
-  }, [geojson]);
+  }, [geojson, photos]);
 
   // Destaque sincronizado: abre o popup do item sob o cursor no roteiro
   useEffect(() => {
