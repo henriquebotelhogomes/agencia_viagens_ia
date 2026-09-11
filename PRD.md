@@ -3,7 +3,7 @@
 > **Documento de Requisitos de Produto (PRD)** — consolida a revisão estratégica do
 > projeto, as decisões tomadas e o plano de modernização da arquitetura.
 >
-> **Versão:** 1.26 · **Status:** ✅ Fases 0, 1 e 2 concluídas · ✨ [Demo](https://voyager-web-b2607fcece65.herokuapp.com) · 🌐 [API](https://voyager-ia-d97e5ffe11f1.herokuapp.com/health) · 📚 [Documentação](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) · **Complementa:** [`specs/`](./specs/README.md)
+> **Versão:** 1.27 · **Status:** ✅ Fases 0, 1 e 2 concluídas (GCP Cloud Run) · ✨ [Demo](https://voyager-web-197215016090.us-central1.run.app) · 🌐 [API](https://voyager-api-197215016090.us-central1.run.app/health) · 📚 [Documentação](https://henriquebotelhogomes.github.io/agencia_viagens_ia/) · **Complementa:** [`specs/`](./specs/README.md)
 
 ***
 

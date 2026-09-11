@@ -3,8 +3,8 @@
 Uso (stack local via docker compose):
     uv run python -m scripts.e2e_smoke
 
-Uso (produção):
-    uv run python -m scripts.e2e_smoke --base-url https://voyager-ia.herokuapp.com
+# Uso (produção no Google Cloud Run):
+#     uv run python -m scripts.e2e_smoke --base-url https://voyager-api-197215016090.us-central1.run.app
 
 NÃO é um teste automatizado: consome tokens de LLM reais. Serve para validar
 a integração completa API → fila → worker → banco → SSE.
