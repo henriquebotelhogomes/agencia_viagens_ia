@@ -133,10 +133,10 @@ class Settings(BaseSettings):
     def normalize_async_database_url(cls, v: Any) -> Any:
         """Garante o driver async na URL do PostgreSQL.
 
-        Provedores gerenciados (Render, Heroku) entregam a URL como
-        ``postgres://`` ou ``postgresql://``, que o SQLAlchemy tenta abrir com o
-        driver **síncrono** e falha em contexto async. A normalização aqui evita
-        depender de configuração manual correta no dashboard.
+        Provedores gerenciados de nuvem (Supabase, Neon, Cloud SQL) frequentemente
+        entregam a URL com esquema ``postgres://`` ou ``postgresql://``, que o
+        SQLAlchemy tenta abrir com o driver **síncrono** e falha em contexto async.
+        A normalização aqui garante ``postgresql+asyncpg://``.
         """
         if not isinstance(v, str) or not v:
             return v
