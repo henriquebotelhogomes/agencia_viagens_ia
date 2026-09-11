@@ -1,0 +1,56 @@
+name: 🐛 Relatório de Bug
+description: Crie um relatório detalhado para nos ajudar a identificar e corrigir um problema.
+title: "[BUG]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por dedicar seu tempo para relatar um problema no **Voyager AI**!
+  - type: textarea
+    id: description
+    attributes:
+      label: Descrição do Bug
+      description: Uma descrição clara e concisa do comportamento inesperado encontrado.
+      placeholder: Ao solicitar um roteiro para Paris com orçamento de 10.000 BRL...
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Componente Afetado
+      options:
+        - Frontend (Next.js / UI)
+        - Backend API (FastAPI / SSE)
+        - Worker / CrewAI / Orquestração
+        - Banco de Dados / Migrations
+        - Infraestrutura / Cloud Run / Docker
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Passos para Reproduzir
+      description: Como podemos reproduzir o erro?
+      placeholder: |
+        1. Acessar 'https://voyager-web-197215016090.us-central1.run.app/'
+        2. Preencher destino 'Tóquio' e datas
+        3. Clicar em 'Gerar Roteiro'
+        4. Notar erro na etapa de streaming SSE
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportamento Esperado
+      description: O que você esperava que acontecesse?
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Ambiente / Sistema Operacional
+      description: Informações sobre navegador, SO, versão do Node/Python (se local).
+      placeholder: Chrome 133 no Windows 11 / Cloud Run Production
+    validations:
+      required: false

@@ -1,0 +1,32 @@
+name: 💡 Sugestão de Funcionalidade
+description: Sugira uma nova ideia, melhoria de agente de IA ou nova funcionalidade de produto.
+title: "[FEATURE]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por propor uma evolução para o **Voyager AI**!
+  - type: textarea
+    id: problem
+    attributes:
+      label: Qual problema ou oportunidade essa funcionalidade resolve?
+      description: Uma explicação clara do contexto e da necessidade de negócio/técnica.
+      placeholder: Atualmente, os usuários não conseguem exportar o roteiro diretamente para o Google Calendar...
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Descrição da Solução Proposta
+      description: Como você imagina essa funcionalidade funcionando no sistema?
+      placeholder: Um novo botão no modal de visualização que gera um arquivo .ics ou sincroniza via OAuth...
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas Consideradas
+      description: Você considerou alguma solução paliativa ou alternativa?
+    validations:
+      required: false

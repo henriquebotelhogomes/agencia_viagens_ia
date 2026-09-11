@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentação Técnica & Arquitetura
+    url: https://henriquebotelhogomes.github.io/agencia_viagens_ia/
+    about: Consulte os guias de arquitetura, ADRs e especificações antes de abrir uma issue.
+  - name: 💬 GitHub Discussions
+    url: https://github.com/henriquebotelhogomes/agencia_viagens_ia/discussions
+    about: Dúvidas conceituais, ideias de roadmap ou discussões de design de IA.

@@ -1,0 +1,167 @@
+name: Publish Containers to GHCR
+
+on:
+  release:
+    types: [published]
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      publish_api:
+        description: 'Publish API Container'
+        type: boolean
+        default: true
+      publish_worker:
+        description: 'Publish Worker Container'
+        type: boolean
+        default: true
+      publish_web:
+        description: 'Publish Web Frontend Container'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish-api:
+    name: Build & Push Voyager API
+    runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || inputs.publish_api
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/voyager-api
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-,format=short
+          labels: |
+            org.opencontainers.image.title=Voyager AI - API
+            org.opencontainers.image.description=FastAPI REST API and SSE streaming backend for Voyager AI
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+
+      - name: Build and push API container
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: web
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  publish-worker:
+    name: Build & Push Voyager Worker
+    runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || inputs.publish_worker
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/voyager-worker
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-,format=short
+          labels: |
+            org.opencontainers.image.title=Voyager AI - Worker
+            org.opencontainers.image.description=SAQ Distributed Task Worker & CrewAI Multi-Agent Orchestrator
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+
+      - name: Build and push Worker container
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: worker
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  publish-web:
+    name: Build & Push Voyager Web (Next.js)
+    runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || inputs.publish_web
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/voyager-web
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-,format=short
+          labels: |
+            org.opencontainers.image.title=Voyager AI - Web
+            org.opencontainers.image.description=Next.js 15+ App Router, MapLibre & Tailwind CSS UI
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+
+      - name: Build and push Web container
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          target: runtime
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://voyager-api-197215016090.us-central1.run.app
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
