@@ -151,3 +151,23 @@ async def test_janela_maxima_e_validada(client: AsyncClient) -> None:
 
     assert response.status_code == 422
     assert response.headers["content-type"].startswith("application/problem+json")
+
+
+async def test_finops_degrades_gracefully_without_database(
+    client: AsyncClient,
+) -> None:
+    """Quando o banco não está configurado, o FinOps retorna
+    dados zerados sem erro 500.
+    """
+    from src.api.deps import optional_session_dep
+
+    # Simula ausência de sessão (banco desativado)
+    client._transport.app.dependency_overrides[optional_session_dep] = lambda: None  # type: ignore[attr-defined]
+
+    response = await client.get("/v1/finops")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["executions"] == 0
+    assert data["total_tokens"] == 0
+    assert data["cost_usd"] == 0.0
+    assert data["daily"] == []

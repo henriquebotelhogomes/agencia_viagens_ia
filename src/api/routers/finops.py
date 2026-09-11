@@ -10,7 +10,7 @@ from datetime import UTC, datetime, timedelta
 from fastapi import APIRouter, Query
 from sqlalchemy import Float, case, cast, func, select
 
-from src.api.deps import SessionDep
+from src.api.deps import OptionalSessionDep
 from src.api.schemas import FinOpsDailyPoint, FinOpsSummary
 from src.db.models import Execution, ExecutionStatus, UsageRecord
 
@@ -26,7 +26,7 @@ MAX_WINDOW_DAYS = 90
     summary="Custo operacional agregado",
 )
 async def finops_summary(
-    session: SessionDep,
+    session: OptionalSessionDep,
     days: int = Query(
         default=30,
         ge=1,
@@ -35,6 +35,20 @@ async def finops_summary(
     ),
 ) -> FinOpsSummary:
     """Agrega custo, tokens e eficiência de cache no período."""
+    if session is None:
+        return FinOpsSummary(
+            window_days=days,
+            executions=0,
+            total_tokens=0,
+            cost_usd=0.0,
+            baseline_cost_usd=0.0,
+            savings_usd=0.0,
+            cache_hit_ratio=0.0,
+            avg_duration_seconds=0.0,
+            by_status={},
+            daily=[],
+        )
+
     since = datetime.now(UTC) - timedelta(days=days)
 
     # `total_tokens` não é coluna: soma prompt + completion na própria query,

@@ -46,7 +46,9 @@ gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregi
 Write-Host "`n[2/5] Compilando e publicando a API no Cloud Run..." -ForegroundColor Cyan
 $ApiImage = "gcr.io/$ProjectId/voyager-api:latest"
 
-gcloud builds submit --project $ProjectId --tag $ApiImage --file Dockerfile .
+# Build com target 'web' via Cloud Build
+gcloud builds submit --project $ProjectId `
+    --config=cloudbuild-api.yaml .
 
 gcloud run deploy voyager-api `
     --project $ProjectId `
@@ -87,7 +89,9 @@ $WebImage = "gcr.io/$ProjectId/voyager-web:latest"
 
 Set-Location frontend
 try {
-    gcloud builds submit --project $ProjectId --tag $WebImage `
+    # Build frontend com NEXT_PUBLIC_API_URL apontando para a API publicada
+    gcloud builds submit --project $ProjectId `
+        --config=cloudbuild-web.yaml `
         --substitutions=_API_URL=$ApiUrl .
 
     gcloud run deploy voyager-web `

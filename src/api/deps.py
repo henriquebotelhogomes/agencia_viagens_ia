@@ -8,6 +8,7 @@ from collections.abc import AsyncIterator
 from typing import Annotated
 
 from fastapi import Depends, Request
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import Settings, get_settings
@@ -25,6 +26,21 @@ async def session_dep() -> AsyncIterator[AsyncSession]:
     """Sessão de banco por request, com rollback automático em erro."""
     async for session in get_session():
         yield session
+
+
+async def optional_session_dep(
+    settings: "SettingsDep",
+) -> AsyncIterator[AsyncSession | None]:
+    """Sessão opcional: se o banco não estiver configurado, retorna None sem quebrar."""
+    if not settings.database_enabled:
+        yield None
+        return
+    try:
+        async for session in get_session():
+            yield session
+    except Exception as exc:
+        logger.warning(f"Falha ao obter sessão do banco: {exc}")
+        yield None
 
 
 def progress_bus_dep(request: Request) -> ProgressBus:
@@ -53,6 +69,7 @@ def client_ip_hash_dep(request: Request) -> str:
 
 SettingsDep = Annotated[Settings, Depends(settings_dep)]
 SessionDep = Annotated[AsyncSession, Depends(session_dep)]
+OptionalSessionDep = Annotated[AsyncSession | None, Depends(optional_session_dep)]
 ProgressBusDep = Annotated[ProgressBus, Depends(progress_bus_dep)]
 RateLimiterDep = Annotated[RateLimiter, Depends(rate_limiter_dep)]
 ClientIpHashDep = Annotated[str, Depends(client_ip_hash_dep)]

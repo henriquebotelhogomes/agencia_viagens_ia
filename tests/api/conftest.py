@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from src.api.deps import (
     client_ip_hash_dep,
+    optional_session_dep,
     progress_bus_dep,
     rate_limiter_dep,
     session_dep,
@@ -119,6 +120,7 @@ async def client(
     app = create_app()
     app.dependency_overrides[settings_dep] = lambda: api_settings
     app.dependency_overrides[session_dep] = lambda: db_session
+    app.dependency_overrides[optional_session_dep] = lambda: db_session
     app.dependency_overrides[progress_bus_dep] = lambda: fake_progress_bus
     app.dependency_overrides[rate_limiter_dep] = lambda: fake_rate_limiter
     app.dependency_overrides[client_ip_hash_dep] = lambda: "hash_de_teste"
