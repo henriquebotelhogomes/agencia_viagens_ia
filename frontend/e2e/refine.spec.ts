@@ -19,7 +19,7 @@ test.describe("Refinamento de roteiro", () => {
     // 1. Gera o roteiro inicial
     await page.goto("/");
     await page.getByLabel("Saindo de").fill("São Paulo");
-    await page.getByLabel("Destino").fill("Lisboa");
+    await page.getByRole("textbox", { name: "Destino", exact: true }).fill("Lisboa");
     await page.getByLabel("Dias").fill("2");
     await page
       .getByLabel("O que você quer aproveitar?")

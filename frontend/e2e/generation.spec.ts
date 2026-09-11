@@ -25,7 +25,7 @@ test.describe("Geração completa", () => {
     await page.goto("/");
 
     await page.getByLabel("Saindo de").fill("Rio de Janeiro");
-    await page.getByLabel("Destino").fill("Buenos Aires");
+    await page.getByRole("textbox", { name: "Destino", exact: true }).fill("Buenos Aires");
     await page.getByLabel("Dias").fill("3");
     await page
       .getByLabel("O que você quer aproveitar?")

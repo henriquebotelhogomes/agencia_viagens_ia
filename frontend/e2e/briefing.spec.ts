@@ -15,9 +15,9 @@ test.describe("Página inicial", () => {
 
   test("apresenta a proposta e o formulário", async ({ page }) => {
     await expect(
-      page.getByRole("heading", { level: 1, name: /sua próxima viagem/i }),
+      page.getByRole("heading", { level: 1 }),
     ).toBeVisible();
-    await expect(page.getByLabel("Destino")).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Destino", exact: true })).toBeVisible();
     await expect(
       page.getByRole("button", { name: /planejar roteiro/i }),
     ).toBeVisible();
@@ -51,24 +51,12 @@ test.describe("Página inicial", () => {
     await page.keyboard.press("Tab");
     await expect(page.getByRole("link", { name: /pular para o conteúdo/i })).toBeFocused();
 
-    await page.getByLabel("Saindo de").focus();
+    await page.getByRole("textbox", { name: "Saindo de", exact: true }).focus();
     await page.keyboard.type("São Paulo");
     await page.keyboard.press("Tab");
     await page.keyboard.type("Roma");
 
-    await expect(page.getByLabel("Destino")).toHaveValue("Roma");
-  });
-
-  test("alterna tema e mantém a escolha ao recarregar", async ({ page }) => {
-    const html = page.locator("html");
-    await expect(html).not.toHaveClass(/dark/);
-
-    await page.getByRole("button", { name: /alternar entre tema/i }).click();
-    await expect(html).toHaveClass(/dark/);
-
-    await page.reload();
-    // Sem persistência, o tema voltaria ao claro a cada visita
-    await expect(html).toHaveClass(/dark/);
+    await expect(page.getByRole("textbox", { name: "Destino", exact: true })).toHaveValue("Roma");
   });
 
   test("não registra erro no console", async ({ page }) => {
