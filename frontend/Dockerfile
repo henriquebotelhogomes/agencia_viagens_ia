@@ -8,7 +8,7 @@
 ############################################
 # Estágio 1: deps
 ############################################
-FROM node:22-alpine AS deps
+FROM node:26-alpine AS deps
 
 WORKDIR /app
 
@@ -22,7 +22,7 @@ RUN npm ci --include=optional || npm install --no-audit --no-fund
 ############################################
 # Estágio 2: builder
 ############################################
-FROM node:22-alpine AS builder
+FROM node:26-alpine AS builder
 
 WORKDIR /app
 COPY --from=deps /app/node_modules node_modules
@@ -38,7 +38,7 @@ RUN npm run build
 ############################################
 # Estágio 3: runtime
 ############################################
-FROM node:22-alpine AS runtime
+FROM node:26-alpine AS runtime
 
 WORKDIR /app
 
