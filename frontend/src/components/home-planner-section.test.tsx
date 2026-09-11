@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HomePlannerSection } from "@/components/home-planner-section";
 
@@ -14,6 +14,10 @@ vi.mock("next/navigation", () => ({
 describe("HomePlannerSection", () => {
   beforeEach(() => {
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("renderiza a seção com os pilares, a vitrine de destinos e o formulário", () => {
@@ -46,6 +50,20 @@ describe("HomePlannerSection", () => {
     await user.click(planejarButtons[0]);
 
     // O input de destino do formulário deve ser preenchido com Lisboa
+    const destinoInput = screen.getByLabelText("Destino") as HTMLInputElement;
+    expect(destinoInput.value).toBe("Lisboa, Portugal");
+  });
+
+  it("funciona normalmente caso o elemento do formulário não esteja no DOM", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(document, "getElementById").mockReturnValue(null);
+    render(<HomePlannerSection />);
+
+    const planejarButtons = screen.getAllByRole("button", {
+      name: /planejar este destino/i,
+    });
+    await user.click(planejarButtons[0]);
+
     const destinoInput = screen.getByLabelText("Destino") as HTMLInputElement;
     expect(destinoInput.value).toBe("Lisboa, Portugal");
   });

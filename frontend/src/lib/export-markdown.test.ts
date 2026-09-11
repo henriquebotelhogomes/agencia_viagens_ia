@@ -170,4 +170,22 @@ describe("downloadItineraryMarkdown", () => {
       vi.unstubAllGlobals();
     }
   });
+
+  it("formata cabeçalho para 1 dia e data desconhecida quando datas forem nulas", () => {
+    const execution = makeExecution({
+      briefing: {
+        origem: "São Paulo",
+        destino: "Santos",
+        dias: 1,
+        interesses: "praia",
+        moeda: "BRL",
+        idioma: "pt-BR",
+      },
+      created_at: "",
+      finished_at: null,
+    });
+    const doc = buildExportDocument(execution);
+    expect(doc).toContain("1 dia");
+    expect(doc).toContain("data desconhecida");
+  });
 });

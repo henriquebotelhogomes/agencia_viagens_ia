@@ -73,6 +73,40 @@ describe("fetchPoiPhoto", () => {
     expect(photo.category).toBe("Praia");
     expect(photo.imageUrl).toContain("images.unsplash.com");
   });
+
+  it("tenta busca com sufixo do destino quando a busca direta falha", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 404 })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          thumbnail: { source: "https://upload.wikimedia.org/louvre.jpg" },
+          extract: "Museu do Louvre em Paris.",
+        }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const photo = await fetchPoiPhoto("Louvre", "Paris, França");
+    expect(photo.source).toBe("wikipedia");
+    expect(photo.imageUrl).toBe("https://upload.wikimedia.org/louvre.jpg");
+  });
+
+  it("lê do sessionStorage se a foto já estiver salva", async () => {
+    const cachedData: PoiPhotoInfo = {
+      name: "Parque Ibirapuera",
+      imageUrl: "https://upload.wikimedia.org/ibi.jpg",
+      category: "Natureza & Parques",
+      source: "wikipedia",
+    };
+    sessionStorage.setItem(
+      "poi_photo_parque ibirapuera::são paulo",
+      JSON.stringify(cachedData),
+    );
+
+    const photo = await fetchPoiPhoto("Parque Ibirapuera", "São Paulo");
+    expect(photo.imageUrl).toBe("https://upload.wikimedia.org/ibi.jpg");
+  });
 });
 
 describe("usePoiPhotos hook", () => {
