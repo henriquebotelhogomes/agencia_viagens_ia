@@ -118,17 +118,17 @@ function Dashboard({ summary }: { summary: FinOpsSummary }) {
             {/* Um <dl> por cartão: dt/dd precisam ser agrupados diretamente */}
             <CardContent className="pt-5">
               <dl>
-                <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <dt className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
                   <Icon className="size-3.5" aria-hidden />
                   {label}
                 </dt>
                 <dd className="mt-2">
                   <span
-                    className={`font-display text-3xl ${highlight ? "text-primary" : ""}`}
+                    className={`text-3xl font-extrabold tracking-tight text-slate-900 ${highlight ? "text-primary" : ""}`}
                   >
                     {value}
                   </span>
-                  <span className="mt-1 block text-xs text-muted-foreground">
+                  <span className="mt-1 block text-xs font-medium text-slate-600">
                     {detail}
                   </span>
                 </dd>
@@ -141,7 +141,7 @@ function Dashboard({ summary }: { summary: FinOpsSummary }) {
       {summary.daily.length > 1 ? (
         <Card className="mt-8">
           <CardContent className="pt-5">
-            <h2 className="mb-5 text-sm font-medium tracking-wide text-muted-foreground uppercase">
+            <h2 className="mb-5 text-xs font-bold tracking-wider text-slate-700 uppercase">
               Consumo por dia
             </h2>
             <CostChart data={summary.daily} />
@@ -151,16 +151,16 @@ function Dashboard({ summary }: { summary: FinOpsSummary }) {
 
       <Card className="mt-8">
         <CardContent className="pt-5">
-          <h2 className="mb-4 text-sm font-medium tracking-wide text-muted-foreground uppercase">
+          <h2 className="mb-4 text-xs font-bold tracking-wider text-slate-700 uppercase">
             Execuções por resultado
           </h2>
           <dl className="flex flex-wrap gap-6">
             {Object.entries(summary.by_status).map(([status, count]) => (
               <div key={status}>
-                <dt className="text-xs text-muted-foreground capitalize">
+                <dt className="text-xs font-semibold text-slate-600 capitalize">
                   {STATUS_LABELS[status] ?? status}
                 </dt>
-                <dd className="font-display text-2xl">{nf.format(count)}</dd>
+                <dd className="text-2xl font-bold tracking-tight text-slate-900">{nf.format(count)}</dd>
               </div>
             ))}
           </dl>

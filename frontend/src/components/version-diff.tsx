@@ -34,10 +34,10 @@ export function VersionDiff({ oldMarkdown, newMarkdown }: VersionDiffProps) {
             key={index}
             className={
               change.added
-                ? "block bg-green-500/15 text-green-800 dark:text-green-300"
+                ? "block bg-green-500/15 text-green-800 font-semibold"
                 : change.removed
-                  ? "block bg-red-500/15 text-red-800 dark:text-red-300"
-                  : "block"
+                  ? "block bg-red-500/15 text-red-800 font-semibold"
+                  : "block text-slate-800"
             }
           >
             {change.added ? "+ " : change.removed ? "- " : "  "}

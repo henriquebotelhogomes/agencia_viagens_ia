@@ -1,6 +1,6 @@
 # ADR-0015 — Hospedagem: Heroku em vez de Render
 
-- **Status**: Aceita
+- **Status**: Substituída por [ADR-0018](0018-hospedagem-gcp-cloud-run.md)
 - **Data**: 2026-07-30
 - **Supersede**: [ADR-0003](0003-hospedagem.md)
 - **Contexto do PRD**: D3

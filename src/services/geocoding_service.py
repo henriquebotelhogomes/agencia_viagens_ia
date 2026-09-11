@@ -61,6 +61,7 @@ class GeocodingService:
                     "model": f"openai/{self.settings.LLM_MODEL_FAST}",
                     "api_key": self.settings.opencode_api_key,
                     "api_base": self.settings.OPENCODE_API_BASE,
+                    "extra_headers": {"x-opencode-session": "voyager-app"},
                 }
             )
         if self.settings.openrouter_enabled:

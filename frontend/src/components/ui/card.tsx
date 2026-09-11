@@ -27,7 +27,7 @@ export function CardTitle({
   ...props
 }: HTMLAttributes<HTMLHeadingElement>) {
   return (
-    <h3 className={cn("text-lg leading-tight font-medium", className)} {...props} />
+    <h3 className={cn("text-lg leading-tight font-bold text-slate-900", className)} {...props} />
   );
 }
 

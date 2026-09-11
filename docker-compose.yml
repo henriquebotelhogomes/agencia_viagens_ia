@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: voyager
       POSTGRES_DB: voyager
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5434}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -23,7 +23,7 @@ services:
     # appendonly garante que a fila sobreviva a restart do container
     command: redis-server --appendonly yes
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6380}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -43,6 +43,8 @@ services:
       uvicorn src.api.main:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
+    volumes:
+      - ./src:/app/src
     env_file:
       - .env
     environment:
@@ -69,6 +71,8 @@ services:
       target: runtime
     command: >-
       saq src.worker.settings.settings
+    volumes:
+      - ./src:/app/src
     env_file:
       - .env
     environment:
@@ -98,6 +102,8 @@ services:
         NEXT_PUBLIC_API_URL: http://localhost:8000
     ports:
       - "3000:3000"
+    environment:
+      - INTERNAL_API_URL=http://api:8000
     depends_on:
       api:
         condition: service_healthy

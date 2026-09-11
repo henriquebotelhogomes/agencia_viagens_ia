@@ -6,10 +6,9 @@
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
 [![Linter: Ruff](https://img.shields.io/badge/linter-ruff-red.svg)](https://github.com/astral-sh/ruff)
 [![Types: mypy strict](https://img.shields.io/badge/types-mypy%20strict-blue.svg)](https://mypy-lang.org/)
-[![Cloud: Heroku](https://img.shields.io/badge/cloud-heroku-430098.svg)](https://heroku.com/)
+[![Cloud: Google Cloud](https://img.shields.io/badge/cloud-google--cloud%20run-4285F4.svg)](https://cloud.google.com/run)
 
-> **✨ Demo ao vivo:** [voyager-web-b2607fcece65.herokuapp.com](https://voyager-web-b2607fcece65.herokuapp.com)
-> · **API:** [voyager-ia-d97e5ffe11f1.herokuapp.com/health](https://voyager-ia-d97e5ffe11f1.herokuapp.com/health)
+> **✨ Deploy Serverless:** Google Cloud Run com Scale-to-Zero ($0/mês) · [ADR-0018](docs/adr/0018-hospedagem-gcp-cloud-run.md)
 > · **Documentação técnica:** [henriquebotelhogomes.github.io/agencia_viagens_ia](https://henriquebotelhogomes.github.io/agencia_viagens_ia/)
 
 > **📌 Projeto de portfólio:** caso de estudo de Engenharia de IA construído com práticas de produção — não é um produto comercial. Ver [escopo e limitações](#escopo-e-limitacoes).
@@ -47,7 +46,7 @@ Uma conversa genérica não oferece, por padrão, controle explícito sobre pesq
 | **Duração observada** | ~51s em uma execução de referência · SLO definido: p95 < 90s |
 | **Cobertura backend** | 92,61% na validação local completa · gate de CI ≥ 90% |
 | **Cobertura frontend** | gates de CI: ≥ 90% linhas/funções e ≥ 85% branches |
-| **Decisões documentadas** | 17 ADRs com trade-offs explícitos |
+| **Decisões documentadas** | 18 ADRs com trade-offs explícitos |
 
 > **Metodologia:** os tokens são medidos. O comparativo reaplica duas tabelas de preço ao mesmo volume observado (1.511 tokens de prompt + 6.919 de completion); não é uma segunda execução no GPT-4o, uma fatura do provedor nem o custo total das ferramentas e da infraestrutura. A amostra é um benchmark funcional, não um teste de carga. Veja a [metodologia FinOps](docs/operations/finops.md) e o [fluxo de execução](docs/architecture/execution-flow.md).
 
@@ -55,29 +54,33 @@ Uma conversa genérica não oferece, por padrão, controle explícito sobre pesq
 
 ## 🖼️ O sistema em ação
 
-**1. Briefing** — o usuário informa origem, destino, dias, moeda, idioma e interesses; os chips aceleram o preenchimento.
+### 🎬 Demonstração Completa do Fluxo (Interativo)
 
-![Homepage da Voyager com o formulário de briefing](screenshots/landingpage.png)
+![Demonstração interativa do Voyager AI](screenshots/demo.gif)
 
-**2. Execução concluída** — progresso etapa a etapa (cache → agentes → geocoding → pronto), painel FinOps com tokens medidos e baseline calculado, e o roteiro gerado.
+**1. Briefing & Vitrine de Destinos** — o usuário escolhe destinos populares pré-configurados ou informa origem, destino, dias, moeda, idioma e interesses com chips ágeis e contraste elevado (WCAG AAA).
 
-![Página de resultado com progresso, painel FinOps e roteiro](screenshots/result-1.png)
+![Homepage da Voyager com o formulário de briefing e vitrine de destinos](screenshots/landingpage.png)
 
-**3. Estimativas na moeda pedida** — o gerente de logística pesquisa referências de voos, hotel e alimentação via busca web e monta a tabela que o arquiteto reutiliza no roteiro, reduzindo valores sem sustentação.
+**2. Execução Concluída & Visão Geral** — progresso etapa a etapa via SSE (cache → agentes → geocoding → concluído), painel FinOps de tokens/custos reais e seletor de exportação multiformato (Markdown e PDF).
 
-![Tabela de custos detalhada em BRL](screenshots/result-2.png)
+![Página de resultado com progresso, painel FinOps, roteiro e seletor multiformato](screenshots/result-1.png)
 
-**4. Roteiro dia a dia** — cronograma manhã/tarde/noite, cada período com plano A (ideal), B (chuva) e C (ritmo leve).
+**3. Central de Reservas & Onde Comprar** — deep links diretos de 1 clique para compras de passagens aéreas (Google Flights na rota e cia sugerida pela IA, Rome2Rio e ClickBus) e hospedagem (Booking.com e Google Hotels direcionados para o hotel exato).
 
-| Dia 1 | Dia 2 |
+![Central de Reservas e Onde Comprar com deep links diretos](screenshots/result-2.png)
+
+**4. Vitrine Fotográfica dos Pontos de Interesse & Detalhe Interativo** — fotos reais obtidas dinamicamente via Wikipedia REST API e Unsplash com modal detalhado ao clicar.
+
+| Vitrine de Atrações | Modal de Detalhe da Atração |
 | :---: | :---: |
-| ![Dia 1 do roteiro](screenshots/result-3.png) | ![Dia 2 do roteiro](screenshots/result-4.png) |
+| ![Vitrine fotográfica das atrações](screenshots/result-3.png) | ![Modal detalhado do ponto turístico](screenshots/result-4.png) |
 
-**5. Dicas do arquiteto + mapa interativo** — recomendações práticas do arquiteto de roteiros e os pontos geolocalizados desenhados no MapLibre (100% no cliente, sem chave de tiles).
+**5. Roteiro Dia a Dia, Dicas do Arquiteto & Mapa Interativo** — cronograma manhã/tarde/noite com planos A, B e C, recomendações práticas do arquiteto e pins geolocalizados desenhados no MapLibre (100% no cliente).
 
-![Dicas exclusivas do arquiteto e mapa com pins geolocalizados](screenshots/result-5.png)
+![Roteiro dia a dia com mapa interativo geolocalizado](screenshots/result-5.png)
 
-**6. Painel FinOps** — tokens agregados da crew, custo calculado, baseline comparativo e aproveitamento de cache, com visão por execução e agregação diária.
+**6. Painel FinOps** — tokens agregados da crew, custo calculado, baseline comparativo com GPT-4o e visão diária de consumo.
 
 ![Dashboard FinOps com métricas e consumo por dia](screenshots/result-6.png)
 
@@ -206,11 +209,11 @@ flowchart TD
 | **Backend** | FastAPI + Pydantic v2 | Async nativo, validação de contrato (RFC 9457 para erros), Settings com `SecretStr`. Ver [ADR-0006](docs/adr/0006-backend.md) |
 | **Fila / worker** | SAQ (Redis) | Async de verdade, sem o `redis<6` do Arq nem o overhead síncrono do Celery. Ver [ADR-0014](docs/adr/0014-fila-saq.md) |
 | **Persistência** | PostgreSQL + Redis | Postgres para estado durável (execuções, roteiros, uso); Redis para cache e fila. Ver [ADR-0008](docs/adr/0008-persistencia.md) |
-| **Frontend** | Next.js 16 (App Router) + React 19 + TS | Substituiu o Streamlit: progresso via SSE, dark mode e conteúdo gerado em três idiomas (interface em PT-BR). Ver [ADR-0005](docs/adr/0005-frontend.md) |
+| **Frontend** | Next.js 16 (App Router) + React 19 + TS | Substituiu o Streamlit: progresso via SSE, tema claro de alto contraste (WCAG AAA), tipografia Inter encorpada, vitrine fotográfica interativa e exportação multiformato (Markdown e PDF). Ver [ADR-0005](docs/adr/0005-frontend.md) |
 | **Mapas** | MapLibre GL JS | Roda 100% no cliente, sem chave de API de tiles (coerente com a política de zero dependência paga). Ver [ADR-0009](docs/adr/0009-mapas.md) |
 | **Geocoding** | Geoapify + cache Redis (30 dias) | 3.000 req/dia grátis; cache elimina chamadas repetidas. Ver [ADR-0010](docs/adr/0010-geocoding.md) |
 | **Observabilidade de LLM** | Langfuse Cloud | Prompt, resposta, tokens, custo e latência de cada chamada — 50k observações/mês grátis. Ver [ADR-0012](docs/adr/0012-observabilidade-llm.md) |
-| **DevOps** | Docker multi-stage non-root + GitHub Actions + uv | Build reproduzível, imagem enxuta, CI com gates de lint/tipagem/cobertura. Ver [ADR-0015](docs/adr/0015-hospedagem-heroku.md) |
+| **DevOps & Nuvem** | Google Cloud Run + Cloud Build + Docker + GitHub Actions + uv | Custo zero operacional com Scale-to-Zero ($0/mês). Ver [ADR-0018](docs/adr/0018-hospedagem-gcp-cloud-run.md) |
 | **Documentação** | MkDocs Material + ADRs | Docs-as-code publicado pelo CI; decisões com trade-offs versionadas. Ver [ADR-0013](docs/adr/0013-documentacao-viva.md) |
 
 ---
@@ -218,6 +221,9 @@ flowchart TD
 ## ✨ Funcionalidades
 
 - **Roteiro personalizado** — itinerário dia a dia (manhã/tarde/noite) a partir de destino, origem, duração e interesses.
+- **Central de Reservas & Onde Comprar** — deep links diretos de 1 clique para compra de passagens aéreas/trens/ônibus (Google Flights pré-configurado na rota e na companhia recomendada, Rome2Rio e ClickBus) e reserva de hospedagem (Booking.com e Google Hotels direcionados para o hotel exato sugerido no roteiro).
+- **Vitrines Fotográficas dos Pontos de Interesse** — resolução dinâmica de fotos reais via Wikipedia REST API com fallback curado do Unsplash, galeria de cartões com rolagem suave e popups ilustrados no mapa geolocalizado.
+- **Exportação Multiformato (Markdown e PDF)** — seletor de formato com download direto do arquivo `.md` e geração de documento `.pdf` pronto para impressão em padrão formal A4, com metadados do briefing e quebras de página otimizadas.
 - **Refinamento iterativo** — ajuste o roteiro por instrução livre ("inclua mais museus") e navegue pelo histórico de versões com diff lado a lado.
 - **Rollback append-only** — reverta para qualquer versão anterior sem reescrever o histórico.
 - **Moeda e idioma parametrizáveis** — BRL/USD/EUR/GBP · pt-BR/en-US/es-ES; o roteiro sai integralmente na combinação escolhida (e a chave de cache inclui ambas).
@@ -225,7 +231,7 @@ flowchart TD
 - **Mapa interativo** — pins geolocalizados de hotéis, restaurantes e atrações, com destaque sincronizado com o roteiro.
 - **Progresso em tempo real (SSE)** — eventos de estado (`queued`, `running` e terminal) e etapa atual transmitidos para a interface; prompts e raciocínio não são expostos ao navegador.
 - **FinOps** — tokens agregados da crew, custo calculado e baseline comparativo com GPT-4o, por execução.
-- **Exportação** — download do roteiro em Markdown.
+- **Design de Alto Contraste & Tipografia Unificada** — interface refinada em Tema Claro de alto contraste (WCAG AAA) com tipografia encorpada em Inter.
 
 ---
 

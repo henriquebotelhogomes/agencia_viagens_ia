@@ -65,10 +65,9 @@ COPY --from=builder --chown=app:app /app /app
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     APP_ENV=production \
-    # Plataformas gerenciadas (Heroku, OpenShift) ignoram o `USER` e rodam com
-    # um UID **arbitrário** e GID 0. Sem um HOME gravável, o CrewAI quebra no
-    # import: ele resolve `$HOME/.local/share` para o storage do ChromaDB e
-    # tenta criar o diretório (ADR-0015).
+    # Plataformas serverless e gerenciadas (Cloud Run, Kubernetes) podem rodar com
+    # UID arbitrário e GID 0. Sem um HOME gravável, o CrewAI quebra no
+    # import ao tentar criar diretórios de cache e storage (ADR-0018).
     HOME=/app \
     XDG_DATA_HOME=/app/.local/share \
     XDG_CACHE_HOME=/app/.cache
@@ -80,21 +79,19 @@ RUN mkdir -p /app/.local/share /app/.cache /app/logs \
     && chmod -R g=u /app
 
 # A imagem também roda no Compose com o usuário padrão; mantenha o GID 0 para
-# acessar os diretórios preparados acima. Em Heroku o UID é substituído, mas o
-# GID 0 continua o mesmo.
+# acessar os diretórios preparados acima.
 USER app:0
 
 # Sem CMD: `runtime` é a base comum — cada estágio de deploy (web/worker/
 # release) e o docker-compose definem o seu próprio comando.
 
 ############################################
-# Estágios de deploy (ADR-0015)
+# Estágios de deploy (ADR-0018)
 #
-# O Heroku Container Registry entrega uma imagem por process type, cada uma com
-# seu próprio CMD. Os três herdam de `runtime`, então compartilham camadas: o
-# build extra custa apenas a camada do comando.
+# Cada imagem herda de `runtime`, compartilhando camadas de base:
+# o build extra custa apenas a camada do comando.
 #
-# Todos usam a forma shell do CMD de propósito — a plataforma injeta `$PORT` em
+# Todos usam a forma shell do CMD de propósito — o Cloud Run injeta `$PORT` em
 # tempo de execução e a forma exec não expandiria a variável.
 ############################################
 FROM runtime AS web
@@ -103,7 +100,6 @@ CMD ["sh", "-c", "uvicorn src.api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
 FROM runtime AS worker
 CMD ["sh", "-c", "saq src.worker.settings.settings"]
 
-# Release phase: se a migration falhar, o Heroku aborta o deploy e mantém a
-# versão anterior no ar.
+# Release / Migrations phase
 FROM runtime AS release
 CMD ["sh", "-c", "alembic upgrade head"]

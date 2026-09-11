@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   getExecution: vi.fn(),
   getGeoJson: vi.fn(),
   download: vi.fn(),
+  downloadPdf: vi.fn(),
   push: vi.fn(),
 }));
 const { useQuery, useExecutionStream, rollback, push } = mocks;
@@ -38,6 +39,7 @@ vi.mock("@/components/agent-timeline", () => ({
   AgentTimeline: () => <div data-testid="timeline" />,
   StatusBadge: ({ status }: { status: string }) => <span>{status}</span>,
 }));
+vi.mock("@/components/booking-panel", () => ({ BookingPanel: () => <div data-testid="booking-panel" /> }));
 vi.mock("@/components/cost-panel", () => ({ CostPanel: () => null }));
 vi.mock("@/components/itinerary-map", () => ({
   ItineraryMap: ({ highlighted }: { highlighted?: string }) => (
@@ -54,6 +56,9 @@ vi.mock("@/components/version-history", () => ({
 }));
 vi.mock("@/lib/export-markdown", () => ({
   downloadItineraryMarkdown: mocks.download,
+}));
+vi.mock("@/lib/export-pdf", () => ({
+  downloadItineraryPdf: mocks.downloadPdf,
 }));
 
 const INITIAL: ExecutionDetail = {
@@ -197,6 +202,26 @@ describe("ExecutionView", () => {
     expect(mocks.getExecution).toHaveBeenCalledWith(succeeded.id);
     expect(mocks.getGeoJson).toHaveBeenCalledWith(succeeded.id);
     expect(mocks.download).toHaveBeenCalledWith(succeeded);
+  });
+
+  it("exporta o roteiro em PDF quando a opção PDF é selecionada no select", async () => {
+    const succeeded = {
+      ...INITIAL,
+      status: "succeeded" as const,
+      itinerary_markdown: "# Lisboa",
+    };
+    useExecutionStream.mockReturnValue(stream("succeeded"));
+    useQuery.mockImplementation(({ queryKey }: { queryKey: string[] }) => ({
+      data: queryKey[0] === "geojson" ? undefined : succeeded,
+    }));
+
+    render(<ExecutionView executionId={succeeded.id} initial={succeeded} />);
+
+    const select = screen.getByRole("combobox", { name: /formato de exportação/i });
+    fireEvent.change(select, { target: { value: "pdf" } });
+    fireEvent.click(screen.getByRole("button", { name: /baixar roteiro/i }));
+
+    expect(mocks.downloadPdf).toHaveBeenCalledWith(succeeded);
   });
 
   it("cria o rollback e navega para a execução resultante", async () => {

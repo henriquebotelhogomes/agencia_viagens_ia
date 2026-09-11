@@ -1,73 +1,14 @@
-import { Coins, MapPinned, Radio } from "lucide-react";
-
-import { BriefingForm } from "@/components/briefing-form";
-
-const PILLARS = [
-  {
-    icon: Radio,
-    title: "Você vê o trabalho acontecendo",
-    body: "Três agentes pesquisam, calculam custos e montam o roteiro. O progresso chega em tempo real, etapa por etapa.",
-  },
-  {
-    icon: Coins,
-    title: "Custo na mesa, não escondido",
-    body: "Cada roteiro mostra os tokens consumidos e quanto custaria no GPT-4o. Transparência de operação, não marketing.",
-  },
-  {
-    icon: MapPinned,
-    title: "Do texto para o mapa",
-    body: "Os lugares sugeridos são geolocalizados e desenhados num mapa interativo, prontos para o seu planejamento.",
-  },
-];
+import { HomePlannerSection } from "@/components/home-planner-section";
+import { TravelHero } from "@/components/travel-hero";
 
 export default function HomePage() {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-20">
-      <div className="grid items-start gap-12 lg:grid-cols-[1fr_28rem] lg:gap-16">
-        <div className="flex flex-col gap-8">
-          <div className="flex flex-col gap-5">
-            <p className="text-sm font-medium tracking-wide text-primary uppercase">
-              Roteiros por agentes de IA
-            </p>
-            <h1 className="max-w-xl text-4xl leading-[1.05] sm:text-5xl lg:text-6xl">
-              Sua próxima viagem,
-              <br />
-              planejada por uma equipe
-              <br />
-              <span className="text-primary">que mostra o trabalho.</span>
-            </h1>
-            <p className="max-w-lg text-lg text-muted-foreground">
-              Diga para onde vai e o que gosta. Um guia local, um analista de
-              logística e um arquiteto de roteiros trabalham juntos — e você
-              acompanha cada passo, com o custo à vista.
-            </p>
-          </div>
+    <div className="mx-auto flex max-w-6xl flex-col gap-14 px-4 py-8 sm:px-6 sm:py-12">
+      {/* Hero Visual Imersivo com Fotos e Chamada Inspiradora */}
+      <TravelHero />
 
-          <dl className="flex flex-col gap-6 border-t border-border pt-8">
-            {PILLARS.map(({ icon: Icon, title, body }) => (
-              // dt/dd como filhos diretos do agrupador: exigência do axe para <dl>
-              <div key={title}>
-                <dt className="flex items-center gap-4 font-medium">
-                  <span
-                    className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary-subtle text-primary"
-                    aria-hidden
-                  >
-                    <Icon className="size-4.5" />
-                  </span>
-                  {title}
-                </dt>
-                <dd className="mt-1 pl-13 text-sm text-muted-foreground">
-                  {body}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-
-        <div className="lg:sticky lg:top-24">
-          <BriefingForm />
-        </div>
-      </div>
+      {/* Seção Interativa com Vitrine de Destinos e Formulário Inteligente */}
+      <HomePlannerSection />
     </div>
   );
 }

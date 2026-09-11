@@ -4,40 +4,37 @@
 @plugin "@tailwindcss/typography";
 
 /*
- * Design tokens (specs/09 §3).
- *
- * Tudo em CSS variables: base para tema claro/escuro e, no futuro, white-label.
- * A paleta evita o azul-padrão de dashboard: terracota sobre neutros quentes
- * (stone) remete a mapas e viagem, e dá identidade editorial ao produto.
+ * Design tokens — Tema Claro de Alto Contraste & Legibilidade Superior.
+ * Tipografia robusta e encorpada (Inter) com excelente diferenciação cromática.
  */
 
 :root {
-  /* Superfícies e texto */
-  --background: oklch(99% 0.004 85);
-  --surface: oklch(100% 0 0);
-  --surface-muted: oklch(96.5% 0.006 85);
-  --foreground: oklch(21% 0.012 55);
-  --muted-foreground: oklch(50% 0.015 60);
-  --border: oklch(91% 0.008 75);
-  --input: oklch(91% 0.008 75);
+  /* Superfícies e texto com máximo contraste (WCAG AAA) */
+  --background: #f8fafc; /* Slate-50: fundo claro e limpo */
+  --surface: #ffffff; /* Fundo puro dos cards */
+  --surface-muted: #f1f5f9; /* Slate-100 */
+  --foreground: #090d16; /* Slate-950/900: texto escuro de altíssimo contraste */
+  --muted-foreground: #334155; /* Slate-700: texto secundário nítido e encorpado */
+  --border: #cbd5e1; /* Slate-300: bordas bem definidas nos cards */
+  --input: #cbd5e1;
 
-  /* Marca — terracota */
-  --primary: oklch(55% 0.155 38);
-  --primary-hover: oklch(49% 0.155 38);
-  --primary-foreground: oklch(99% 0.004 85);
-  --primary-subtle: oklch(95% 0.03 45);
+  /* Marca — Azul oceânico de viagem */
+  --primary: #0284c7; /* Sky-600 */
+  --primary-hover: #0369a1; /* Sky-700 */
+  --primary-foreground: #ffffff;
+  --primary-subtle: #e0f2fe; /* Sky-100 */
 
-  /* Apoio — teal profundo para dados e gráficos */
-  --accent: oklch(48% 0.09 195);
-  --accent-subtle: oklch(95% 0.025 195);
+  /* Apoio — Âmbar pôr do sol para badges e destaques */
+  --accent: #d97706; /* Amber-600 */
+  --accent-subtle: #fef3c7; /* Amber-100 */
 
   /* Estados */
-  --success: oklch(52% 0.13 150);
-  --warning: oklch(65% 0.14 75);
-  --destructive: oklch(53% 0.2 25);
-  --destructive-foreground: oklch(99% 0.004 85);
+  --success: #16a34a;
+  --warning: #d97706;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
 
-  --ring: oklch(55% 0.155 38);
+  --ring: #0284c7;
 
   /* Raios */
   --radius-sm: 0.375rem;
@@ -45,47 +42,17 @@
   --radius-lg: 1rem;
   --radius-xl: 1.5rem;
 
-  /* Sombras discretas: elevação por camada, não por peso */
-  --shadow-sm: 0 1px 2px 0 oklch(21% 0.012 55 / 0.05);
-  --shadow: 0 1px 3px 0 oklch(21% 0.012 55 / 0.08), 0 1px 2px -1px oklch(21% 0.012 55 / 0.06);
-  --shadow-md: 0 4px 12px -2px oklch(21% 0.012 55 / 0.1), 0 2px 6px -2px oklch(21% 0.012 55 / 0.06);
-  --shadow-lg: 0 12px 32px -8px oklch(21% 0.012 55 / 0.14);
+  /* Sombras elegantes com elevação clara */
+  --shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.06);
+  --shadow: 0 1px 3px 0 rgb(15 23 42 / 0.08), 0 1px 2px -1px rgb(15 23 42 / 0.06);
+  --shadow-md: 0 4px 14px -2px rgb(15 23 42 / 0.09), 0 2px 6px -2px rgb(15 23 42 / 0.05);
+  --shadow-lg: 0 12px 32px -8px rgb(15 23 42 / 0.14);
 
   /* Motion */
   --duration-fast: 120ms;
   --duration: 200ms;
   --duration-slow: 400ms;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.dark {
-  --background: oklch(16% 0.008 55);
-  --surface: oklch(20% 0.01 55);
-  --surface-muted: oklch(24% 0.012 55);
-  --foreground: oklch(96% 0.006 85);
-  --muted-foreground: oklch(70% 0.014 70);
-  --border: oklch(30% 0.012 55);
-  --input: oklch(30% 0.012 55);
-
-  --primary: oklch(66% 0.15 40);
-  --primary-hover: oklch(72% 0.15 40);
-  --primary-foreground: oklch(18% 0.01 55);
-  --primary-subtle: oklch(28% 0.05 40);
-
-  --accent: oklch(70% 0.1 195);
-  --accent-subtle: oklch(27% 0.04 195);
-
-  --success: oklch(70% 0.14 150);
-  --warning: oklch(78% 0.14 75);
-  --destructive: oklch(64% 0.19 25);
-  --destructive-foreground: oklch(16% 0.008 55);
-
-  --ring: oklch(66% 0.15 40);
-
-  --shadow-sm: 0 1px 2px 0 oklch(0% 0 0 / 0.3);
-  --shadow: 0 1px 3px 0 oklch(0% 0 0 / 0.4), 0 1px 2px -1px oklch(0% 0 0 / 0.3);
-  --shadow-md: 0 4px 12px -2px oklch(0% 0 0 / 0.45);
-  --shadow-lg: 0 12px 32px -8px oklch(0% 0 0 / 0.55);
 }
 
 @theme inline {
@@ -121,8 +88,8 @@
   --shadow-md: var(--shadow-md);
   --shadow-lg: var(--shadow-lg);
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-display), ui-serif, Georgia, serif;
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
 }
 
@@ -145,19 +112,150 @@
     outline-offset: 2px;
   }
 
-  /* Títulos editoriais: serif com tracking apertado */
+  /* Títulos unificados em sans-serif bold e encorpado */
   h1,
   h2,
-  h3 {
-    font-family: var(--font-display);
-    letter-spacing: -0.02em;
+  h3,
+  h4 {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    color: #020617;
+    letter-spacing: -0.025em;
     text-wrap: balance;
   }
 
-  /* Parágrafos não devem terminar com palavra órfã */
+  /* Parágrafos com espessura de caractere legível */
   p {
+    color: #1e293b;
     text-wrap: pretty;
   }
+}
+
+/* Regras explícitas de alto contraste para o roteiro em Markdown (.prose) */
+.prose {
+  color: #0f172a !important;
+  max-width: none !important;
+  line-height: 1.75 !important;
+}
+
+.prose p {
+  color: #1e293b !important;
+  font-size: 1.025rem !important;
+  font-weight: 500 !important;
+  line-height: 1.75 !important;
+  margin-top: 1.2em !important;
+  margin-bottom: 1.2em !important;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4 {
+  color: #020617 !important;
+  font-family: var(--font-sans) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
+}
+
+.prose h1 {
+  font-size: 1.85rem !important;
+  font-weight: 800 !important;
+  margin-top: 1.5em !important;
+  margin-bottom: 0.75em !important;
+}
+
+.prose h2 {
+  font-size: 1.4rem !important;
+  font-weight: 750 !important;
+  border-bottom: 2px solid #e2e8f0 !important;
+  padding-bottom: 0.4em !important;
+  margin-top: 1.75em !important;
+  margin-bottom: 0.75em !important;
+}
+
+.prose h3 {
+  font-size: 1.2rem !important;
+  font-weight: 700 !important;
+  margin-top: 1.35em !important;
+  margin-bottom: 0.5em !important;
+}
+
+.prose strong,
+.prose b {
+  color: #020617 !important;
+  font-weight: 700 !important;
+}
+
+.prose ul,
+.prose ol {
+  color: #1e293b !important;
+  padding-left: 1.5em !important;
+  margin-top: 1em !important;
+  margin-bottom: 1em !important;
+}
+
+.prose li {
+  color: #1e293b !important;
+  font-weight: 500 !important;
+  margin-top: 0.4em !important;
+  margin-bottom: 0.4em !important;
+}
+
+.prose li::marker {
+  color: #0284c7 !important;
+  font-weight: 700 !important;
+}
+
+.prose blockquote {
+  border-left: 4px solid #0284c7 !important;
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  font-style: normal !important;
+  font-weight: 500 !important;
+  padding: 0.75rem 1.25rem !important;
+  border-radius: 0 0.5rem 0.5rem 0 !important;
+  margin: 1.5em 0 !important;
+}
+
+.prose table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 1.5em 0 !important;
+}
+
+.prose th {
+  background-color: #f1f5f9 !important;
+  color: #020617 !important;
+  font-weight: 700 !important;
+  padding: 0.75rem 1rem !important;
+  border: 1px solid #cbd5e1 !important;
+  text-align: left !important;
+}
+
+.prose td {
+  color: #1e293b !important;
+  font-weight: 500 !important;
+  padding: 0.75rem 1rem !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.prose tr:nth-child(even) td {
+  background-color: #f8fafc !important;
+}
+
+.prose a {
+  color: #0284c7 !important;
+  font-weight: 600 !important;
+  text-decoration: underline !important;
+}
+
+.prose code {
+  color: #0f172a !important;
+  background-color: #f1f5f9 !important;
+  padding: 0.2em 0.4em !important;
+  border-radius: 0.25rem !important;
+  font-size: 0.875em !important;
+  font-weight: 600 !important;
 }
 
 /* Respeita quem pediu menos movimento (WCAG 2.3.3) */
@@ -192,24 +290,51 @@
   background-image: linear-gradient(
     90deg,
     transparent,
-    oklch(100% 0 0 / 0.35),
+    rgba(255, 255, 255, 0.6),
     transparent
   );
   transform: translateX(-100%);
   animation: shimmer 1.8s infinite;
 }
 
-.dark .skeleton::after {
-  background-image: linear-gradient(
-    90deg,
-    transparent,
-    oklch(100% 0 0 / 0.06),
-    transparent
-  );
+/* Popups do MapLibre mantêm texto legível */
+.maplibregl-popup-content {
+  color: #0f172a !important;
+  font-weight: 500;
 }
 
-/* Popups do MapLibre mantêm texto legível no dark mode — o fundo
-   do popup é sempre branco, então a cor do texto também precisa ser. */
-.maplibregl-popup-content {
-  color: oklch(21% 0.012 55) !important;
+/* Regras de impressão para export em PDF e Ctrl+P */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  header,
+  aside,
+  nav,
+  button,
+  select,
+  .no-print,
+  #mapa-roteiro,
+  [data-testid="timeline"] {
+    display: none !important;
+  }
+
+  #roteiro-markdown-conteudo {
+    padding: 0 !important;
+    color: #0f172a !important;
+  }
+
+  table {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  h1, h2, h3 {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
 }
+
+

@@ -194,4 +194,30 @@ describe("BriefingForm", () => {
     expect(alerta).toHaveTextContent("Algo deu errado");
     expect(alerta).not.toHaveTextContent("boom interno");
   });
+
+  it("preenche os campos automaticamente quando um destino é selecionado", () => {
+    const destination = {
+      id: "roma",
+      name: "Roma, Itália",
+      country: "Itália",
+      tagline: "História e gastronomia",
+      category: "gastronomia" as const,
+      categoryLabel: "Gastronomia",
+      imageUrl: "https://example.com/roma.jpg",
+      suggestedDays: 5,
+      currency: "EUR" as const,
+      interests: ["história", "gastronomia"],
+      highlights: ["Coliseu"],
+    };
+
+    render(<BriefingForm selectedDestination={destination} />);
+
+    expect(screen.getByLabelText("Destino")).toHaveValue("Roma, Itália");
+    expect(screen.getByLabelText("Dias")).toHaveValue(5);
+    expect(screen.getByLabelText("Moeda")).toHaveValue("EUR");
+    expect(screen.getByLabelText("O que você quer aproveitar?")).toHaveValue(
+      "história, gastronomia",
+    );
+    expect(screen.getByText(/Destino selecionado:/i)).toBeInTheDocument();
+  });
 });

@@ -1,0 +1,53 @@
+steps:
+  # 1. Build Backend API Container
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--target'
+      - 'web'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/voyager-api:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/voyager-api:latest'
+      - '.'
+    id: 'build-api'
+
+  # 2. Build Worker Container
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--target'
+      - 'worker'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/voyager-worker:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/voyager-worker:latest'
+      - '.'
+    id: 'build-worker'
+
+  # 3. Build Frontend Container
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_API_URL=$_API_URL'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/voyager-web:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/voyager-web:latest'
+      - './frontend'
+    id: 'build-frontend'
+
+images:
+  - 'gcr.io/$PROJECT_ID/voyager-api:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/voyager-api:latest'
+  - 'gcr.io/$PROJECT_ID/voyager-worker:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/voyager-worker:latest'
+  - 'gcr.io/$PROJECT_ID/voyager-web:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/voyager-web:latest'
+
+substitutions:
+  _API_URL: 'http://localhost:8000'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

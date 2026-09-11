@@ -1,9 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2, Sparkles, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
   type TripBriefingInput,
   tripBriefingSchema,
 } from "@/lib/api/types";
+import type { Destination } from "@/lib/destinations";
 
 const CURRENCY_LABELS: Record<(typeof CURRENCIES)[number], string> = {
   BRL: "Real (R$)",
@@ -43,7 +44,15 @@ const INTEREST_CHIPS = [
   "praias",
 ];
 
-export function BriefingForm() {
+export interface BriefingFormProps {
+  selectedDestination?: Destination | null;
+  onClearDestination?: () => void;
+}
+
+export function BriefingForm({
+  selectedDestination,
+  onClearDestination,
+}: BriefingFormProps = {}) {
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string>();
   const idempotencyKeys = useRef(new Map<string, string>());
@@ -54,8 +63,6 @@ export function BriefingForm() {
     setValue,
     getValues,
     formState: { errors, isSubmitting },
-    // Três genéricos: campos crus, contexto e o tipo já validado que chega ao
-    // handler. Necessário porque `dias` é coagido de string para número.
   } = useForm<TripBriefingInput, unknown, TripBriefing>({
     resolver: zodResolver(tripBriefingSchema),
     defaultValues: {
@@ -67,6 +74,20 @@ export function BriefingForm() {
       idioma: "pt-BR",
     },
   });
+
+  // Atualiza os campos quando um destino sugerido é selecionado
+  useEffect(() => {
+    if (selectedDestination) {
+      setValue("destino", selectedDestination.name, { shouldValidate: true });
+      setValue("dias", selectedDestination.suggestedDays, {
+        shouldValidate: true,
+      });
+      setValue("moeda", selectedDestination.currency, { shouldValidate: true });
+      setValue("interesses", selectedDestination.interests.join(", "), {
+        shouldValidate: true,
+      });
+    }
+  }, [selectedDestination, setValue]);
 
   /** Acrescenta o interesse ao campo, sem duplicar o que já está lá. */
   const addChip = (chip: string) => {
@@ -80,9 +101,6 @@ export function BriefingForm() {
   const onSubmit = async (briefing: TripBriefing) => {
     setSubmitError(undefined);
     try {
-      // A chave é aleatória por navegador, mas é mantida para um retry deste
-      // mesmo briefing após falha transitória. Nunca é compartilhada entre
-      // usuários que preencheram os mesmos campos.
       const briefingKey = JSON.stringify(briefing);
       const idempotencyKey =
         idempotencyKeys.current.get(briefingKey) ?? crypto.randomUUID();
@@ -103,17 +121,35 @@ export function BriefingForm() {
   };
 
   return (
-    <Card className="shadow-md">
+    <Card className="border-border shadow-md">
       <CardContent className="pt-5">
-        {/* A chamada a handleSubmit fica no handler (não no render): onSubmit
-            lê o ref de idempotência, e a regra react-hooks/refs veta passar
-            ao render uma função que possa ler ref. */}
         <form
           onSubmit={(event) => {
             void handleSubmit(onSubmit)(event);
           }}
           className="flex flex-col gap-5"
         >
+          {selectedDestination ? (
+            <div className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary-subtle px-3.5 py-2.5 text-xs text-primary">
+              <div className="flex items-center gap-2">
+                <Sparkles className="size-4 shrink-0 text-primary" aria-hidden />
+                <span>
+                  Destino selecionado: <strong>{selectedDestination.name}</strong> ({selectedDestination.suggestedDays} dias sugeridos)
+                </span>
+              </div>
+              {onClearDestination ? (
+                <button
+                  type="button"
+                  onClick={onClearDestination}
+                  className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-surface hover:text-foreground"
+                >
+                  <X className="size-3" aria-hidden />
+                  Limpar
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label="Saindo de" error={errors.origem?.message}>
               {(a11y) => (
@@ -138,18 +174,32 @@ export function BriefingForm() {
           </div>
 
           <div className="grid gap-5 sm:grid-cols-3">
-            <Field label="Dias" error={errors.dias?.message}>
-              {(a11y) => (
-                <Input
-                  {...a11y}
-                  {...register("dias")}
-                  type="number"
-                  min={1}
-                  max={30}
-                  inputMode="numeric"
-                />
-              )}
-            </Field>
+            <div>
+              <Field label="Dias" error={errors.dias?.message}>
+                {(a11y) => (
+                  <Input
+                    {...a11y}
+                    {...register("dias")}
+                    type="number"
+                    min={1}
+                    max={30}
+                    inputMode="numeric"
+                  />
+                )}
+              </Field>
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {[3, 5, 7, 10].map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setValue("dias", d, { shouldValidate: true })}
+                    className="rounded border border-border/80 px-1.5 py-0.5 text-[10px] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                  >
+                    {d}d
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <Field label="Moeda" error={errors.moeda?.message}>
               {(a11y) => (

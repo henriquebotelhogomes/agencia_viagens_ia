@@ -116,6 +116,7 @@ nav:
       - ADR-0015 Hospedagem Heroku: adr/0015-hospedagem-heroku.md
       - ADR-0016 Internacionalização: adr/0016-i18n.md
       - ADR-0017 Versionamento de roteiro: adr/0017-versionamento-roteiro.md
+      - ADR-0018 Hospedagem Google Cloud Run: adr/0018-hospedagem-gcp-cloud-run.md
   - Operação:
       - Deploy: operations/deploy.md
       - Observabilidade: operations/observability.md

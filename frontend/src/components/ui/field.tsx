@@ -32,7 +32,7 @@ export function Label({
 }: LabelHTMLAttributes<HTMLLabelElement>) {
   return (
     <label
-      className={cn("text-sm font-medium text-foreground", className)}
+      className={cn("text-sm font-semibold text-slate-900", className)}
       {...props}
     />
   );

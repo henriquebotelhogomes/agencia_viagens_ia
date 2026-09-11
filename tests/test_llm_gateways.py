@@ -33,10 +33,12 @@ def test_primary_tiers_use_opencode_go(captured_llm) -> None:
     kwargs = captured_llm.call_args.kwargs
     assert kwargs["model"] == f"openai/{settings.LLM_MODEL_FAST}"
     assert kwargs["api_base"] == settings.OPENCODE_API_BASE
+    assert kwargs["extra_headers"] == {"x-opencode-session": "voyager-app"}
 
     _ = agents.llm_fast_tools
     kwargs = captured_llm.call_args.kwargs
     assert kwargs["model"] == f"openai/{settings.LLM_MODEL_FAST_TOOLS}"
+    assert kwargs["extra_headers"] == {"x-opencode-session": "voyager-app"}
 
 
 def test_pro_tier_uses_openrouter(captured_llm) -> None:

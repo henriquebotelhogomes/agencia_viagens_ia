@@ -11,6 +11,7 @@ import {
 import { useEffect, useRef } from "react";
 
 import type { GeoJson } from "@/lib/api/types";
+import type { PoiPhotoInfo } from "@/lib/poi-photos";
 
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -39,15 +40,14 @@ interface ItineraryMapProps {
   geojson: GeoJson;
   /** Nome do local destacado (sincroniza com o hover no roteiro). */
   highlighted?: string;
+  /** Mapa de fotos dos pontos para exibição em miniatura no popup. */
+  photos?: Record<string, PoiPhotoInfo>;
 }
 
 /**
- * Mapa dos pontos do roteiro.
- *
- * Renderização 100% client-side a partir do GeoJSON da API (ADR-0009: o servidor
- * produz dados, o cliente decide como desenhar).
+ * Mapa dos pontos do roteiro com popups fotográficos enriquecidos.
  */
-export function ItineraryMap({ geojson, highlighted }: ItineraryMapProps) {
+export function ItineraryMap({ geojson, highlighted, photos }: ItineraryMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Map<string, Marker>>(new Map());
@@ -78,9 +78,21 @@ export function ItineraryMap({ geojson, highlighted }: ItineraryMapProps) {
 
     for (const feature of geojson.features) {
       const name = feature.properties.name;
-      const marker = new Marker({ color: "#c2542a" })
+      const photo = photos?.[name];
+
+      let popupHtml = `<div style="padding: 2px; max-width: 190px; font-family: inherit;">`;
+      if (photo?.imageUrl) {
+        popupHtml += `<img src="${photo.imageUrl}" alt="${name}" style="width: 100%; height: 85px; object-fit: cover; border-radius: 6px; margin-bottom: 6px; display: block;" />`;
+      }
+      popupHtml += `<strong style="display:block; font-size: 13px; font-weight: 700; color: #090d16; line-height: 1.3;">${name}</strong>`;
+      if (photo?.category) {
+        popupHtml += `<span style="display:inline-block; margin-top: 3px; font-size: 10px; font-weight: 700; color: #0284c7; text-transform: uppercase;">${photo.category}</span>`;
+      }
+      popupHtml += `</div>`;
+
+      const marker = new Marker({ color: "#0284c7" })
         .setLngLat(feature.geometry.coordinates)
-        .setPopup(new Popup({ offset: 24, closeButton: false }).setText(name))
+        .setPopup(new Popup({ offset: 24, closeButton: false }).setHTML(popupHtml))
         .addTo(map);
       markers.set(name, marker);
     }

@@ -56,6 +56,7 @@ class TravelAgents:
             "model": f"openai/{model}",
             "api_key": self.settings.opencode_api_key,
             "api_base": self.settings.OPENCODE_API_BASE,
+            "extra_headers": {"x-opencode-session": "voyager-app"},
         }
 
     def _openrouter_model(self, model: str) -> dict[str, Any]:
@@ -77,7 +78,8 @@ class TravelAgents:
                 if self.use_fallback
                 else self._go_model(self.settings.LLM_MODEL_FAST)
             )
-            self._llm_fast = LLM(**kwargs, temperature=0.2)
+            temp = 1.0 if "kimi" in kwargs["model"].lower() else 0.2
+            self._llm_fast = LLM(**kwargs, temperature=temp)
         return self._llm_fast
 
     @property
@@ -89,7 +91,8 @@ class TravelAgents:
                 if self.use_fallback
                 else self._go_model(self.settings.LLM_MODEL_FAST_TOOLS)
             )
-            self._llm_fast_tools = LLM(**kwargs, temperature=0.2)
+            temp = 1.0 if "kimi" in kwargs["model"].lower() else 0.2
+            self._llm_fast_tools = LLM(**kwargs, temperature=temp)
         return self._llm_fast_tools
 
     @property
@@ -101,7 +104,8 @@ class TravelAgents:
                 if self.use_fallback and self.settings.opencode_enabled
                 else self._openrouter_model(self.settings.LLM_MODEL_PRO)
             )
-            self._llm_pro = LLM(**kwargs, temperature=0.3)
+            temp = 1.0 if "kimi" in kwargs["model"].lower() else 0.3
+            self._llm_pro = LLM(**kwargs, temperature=temp)
         return self._llm_pro
 
     @property

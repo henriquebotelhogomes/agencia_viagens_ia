@@ -25,7 +25,25 @@ import {
   versionListSchema,
 } from "./types";
 
-/** Base da API. Em produção vem do ambiente; em dev, o padrão local. */
+/**
+ * Retorna a URL base da API.
+ * - No servidor (SSR via Node.js dentro do container Docker), usa INTERNAL_API_URL ou http://api:8000.
+ * - No navegador do cliente, usa NEXT_PUBLIC_API_URL ou http://localhost:8000.
+ */
+export function getApiBaseUrl(): string {
+  if (typeof window === "undefined") {
+    return (
+      process.env.INTERNAL_API_URL ??
+      process.env.NEXT_PUBLIC_API_URL ??
+      "http://api:8000"
+    ).replace(/\/$/, "");
+  }
+  return (
+    process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+  ).replace(/\/$/, "");
+}
+
+/** Base da API para compatibilidade legada. */
 export const API_BASE_URL = (
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
 ).replace(/\/$/, "");
@@ -59,7 +77,7 @@ async function request<T>(
 ): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(`${getApiBaseUrl()}${path}`, {
       ...init,
       headers: { "Content-Type": "application/json", ...init?.headers },
     });
@@ -136,7 +154,7 @@ export const api = {
     ),
 
   /** URL do fluxo SSE de progresso, consumida por `EventSource`. */
-  streamUrl: (id: string) => `${API_BASE_URL}/v1/executions/${id}/stream`,
+  streamUrl: (id: string) => `${getApiBaseUrl()}/v1/executions/${id}/stream`,
 
   finops: (days = 30) =>
     request<FinOpsSummary>(`/v1/finops?days=${days}`, finOpsSummarySchema, {

@@ -38,7 +38,7 @@ recrutadores técnicos e clientes. Não há meta de receita nesta fase.
 | --- | ---------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------ |
 | D1  | Posicionamento         | **Portfólio de elite**                                                  | SaaS real; híbrido evolutivo                                 |
 | D2  | Estratégia de LLM      | **OpenCode Go primário + OpenRouter fallback/pro** (rev. v1.1)          | OpenRouter único; só Go; chaves diretas                      |
-| D3  | Hospedagem             | **Heroku** com crédito GitHub Student — rev. ADR-0015                   | Render free (sem worker; Postgres expira); Azure; DigitalOcean |
+| D3  | Hospedagem             | **Google Cloud Run** (Scale-to-Zero $0/mês) — rev. ADR-0018             | Heroku (crédito temporário, atrito CLI); Render free         |
 | D4  | Autenticação           | **Adiada** (rate limiting por IP no MVP)                                | Clerk; Auth.js v5                                            |
 | D5  | Frontend               | **Next.js 15 (App Router) + TypeScript** substitui Streamlit            | Remix, SvelteKit, Angular                                    |
 | D6  | Backend                | **FastAPI + Pydantic v2**, reaproveitando `src/` como núcleo de domínio | Reescrita em Node/Go                                         |

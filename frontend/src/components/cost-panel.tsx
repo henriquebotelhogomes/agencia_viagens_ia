@@ -48,7 +48,7 @@ export function CostPanel({ cost }: { cost: CostSummary }) {
     <Card>
       <CardContent className="pt-5">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
+          <h2 className="text-xs font-bold tracking-wider text-slate-700 uppercase">
             Custo da operação
           </h2>
           {cost.served_from_cache ? (
@@ -62,17 +62,17 @@ export function CostPanel({ cost }: { cost: CostSummary }) {
         <dl className="grid gap-4 sm:grid-cols-3">
           {metrics.map(({ icon: Icon, label, value, detail, highlight }) => (
             <div key={label} className="flex flex-col gap-1">
-              <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <dt className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
                 <Icon className="size-3.5" aria-hidden />
                 {label}
               </dt>
               <dd>
                 <span
-                  className={`font-display text-2xl ${highlight ? "text-primary" : ""}`}
+                  className={`text-2xl font-bold tracking-tight text-slate-900 ${highlight ? "text-primary" : ""}`}
                 >
                   {value}
                 </span>
-                <span className="mt-0.5 block text-xs text-muted-foreground">
+                <span className="mt-0.5 block text-xs font-medium text-slate-600">
                   {detail}
                 </span>
               </dd>

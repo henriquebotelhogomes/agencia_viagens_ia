@@ -29,9 +29,10 @@ quando o contexto muda.
 | [0012](0012-observabilidade-llm.md) | Observabilidade de LLM | Aceita | Langfuse Cloud |
 | [0013](0013-documentacao-viva.md) | Documentação viva | Aceita | MkDocs Material |
 | [0014](0014-fila-saq.md) | Fila async | Aceita | SAQ (supersede ADR-0007) |
-| [0015](0015-hospedagem-heroku.md) | Hospedagem | Aceita | Heroku com crédito Student (supersede ADR-0003) |
+| [0015](0015-hospedagem-heroku.md) | Hospedagem | Substituída por [ADR-0018](0018-hospedagem-gcp-cloud-run.md) | Heroku com crédito Student (supersede ADR-0003) |
 | [0016](0016-i18n.md) | Internacionalização | Aceita | Conteúdo i18n; interface somente em português |
 | [0017](0017-versionamento-roteiro.md) | Versionamento de roteiro | Aceita | Linhagem root/parent, rollback append-only, diff client-side |
+| [0018](0018-hospedagem-gcp-cloud-run.md) | Hospedagem GCP | Aceita | Google Cloud Run com Scale-to-Zero $0/mês (supersede ADR-0015) |
 
 ## Formato
 

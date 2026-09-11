@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Instrument_Serif, Inter } from "next/font/google";
+import { Inter } from "next/font/google";
 
 import { ThemeProvider } from "@/components/theme-provider";
 import { SiteHeader } from "@/components/site-header";
@@ -7,22 +7,12 @@ import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 
 /**
- * Inter para interface, Instrument Serif para títulos.
- *
- * O par sans + serif dá o tom editorial pedido em specs/09 §3 e evita a
- * aparência de dashboard genérico. `display: "swap"` troca a fonte assim que
- * carrega, sem bloquear a primeira pintura.
+ * Inter com pesos completos para máxima legibilidade e caracteres encorpados.
  */
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
-  display: "swap",
-});
-
-const display = Instrument_Serif({
-  subsets: ["latin"],
-  weight: "400",
-  variable: "--font-display",
+  weight: ["400", "500", "600", "700", "800"],
   display: "swap",
 });
 
@@ -43,30 +33,15 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fdfcfa" },
-    { media: "(prefers-color-scheme: dark)", color: "#1a1715" },
-  ],
+  themeColor: "#f8fafc",
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
-      <head>
-        {/*
-         * Aplica o tema antes da primeira pintura. Sem isso, quem usa tema
-         * escuro vê um flash branco a cada carregamento — o React só hidrata
-         * depois do HTML já estar na tela.
-         */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('voyager-theme')||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');if(t==='dark')document.documentElement.classList.add('dark')}catch(e){}`,
-          }}
-        />
-      </head>
-      <body className={`${inter.variable} ${display.variable} antialiased`}>
+    <html lang="pt-BR">
+      <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider>
           {/* Atalho para quem navega por teclado pular direto ao conteúdo */}
           <a

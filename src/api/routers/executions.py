@@ -506,10 +506,18 @@ async def _event_generator(
     execution: Execution, progress_bus: ProgressBus, session: AsyncSession
 ) -> Any:
     """Produz eventos SSE e reconcilia o banco quando o pub/sub fica silencioso."""
+    initial_step = (
+        "orquestracao" if execution.status == ExecutionStatus.RUNNING else "cache"
+    )
     current = ProgressEvent(
         execution_id=execution.id,
         status=execution.status,
-        message=f"Estado atual: {execution.status.value}",
+        message=(
+            "Agentes trabalhando no seu roteiro..."
+            if execution.status == ExecutionStatus.RUNNING
+            else f"Estado atual: {execution.status.value}"
+        ),
+        step=initial_step,
         at=datetime.now(UTC),
     )
     yield {"event": "progress", "data": current.model_dump_json()}

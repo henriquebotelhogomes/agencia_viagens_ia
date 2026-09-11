@@ -17,9 +17,9 @@ const KIND_LABELS: Record<ExecutionKind, string> = {
 };
 
 const KIND_COLORS: Record<ExecutionKind, string> = {
-  initial: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
-  refine: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  rollback: "bg-purple-500/15 text-purple-700 dark:text-purple-300",
+  initial: "bg-blue-500/15 text-blue-800 font-semibold",
+  refine: "bg-amber-500/15 text-amber-800 font-semibold",
+  rollback: "bg-purple-500/15 text-purple-800 font-semibold",
 };
 
 interface VersionHistoryProps {

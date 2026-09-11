@@ -41,6 +41,7 @@ ENV/
 # IDEs
 .vscode/
 .idea/
+.qoder/
 *.swp
 *.swo
 
@@ -56,6 +57,7 @@ test-results/
 logs/
 
 # Artefatos de validação/diagnóstico (screenshots, dumps)
+screenshots/frames/
 *.png
 *.jpg
 !docs/**/*.png

@@ -1,17 +1,15 @@
 # Deploy
 
-Toda a stack roda no **Heroku** ([ADR-0015](../adr/0015-hospedagem-heroku.md)),
-publicada pelo **Container Registry** — imagens construídas localmente com
-cache, não por `git push heroku`. São dois apps:
+Toda a stack roda no **Google Cloud Platform (Cloud Run)** ([ADR-0018](../adr/0018-hospedagem-gcp-cloud-run.md)),
+com política de **Scale-to-Zero ($0/mês)** e imagens compiladas via **Cloud Build** / **Artifact Registry**.
+São dois serviços principais:
 
-| App | Conteúdo | Plano |
-| --- | -------- | ----- |
-| `voyager-ia` | API (FastAPI) + worker (SAQ) + release phase (migrations) | Eco |
-| `voyager-web` | Frontend Next.js | Eco |
+| Serviço | Conteúdo | Plataforma | Custo Ocioso |
+| ------- | -------- | ---------- | ------------ |
+| `voyager-api` | API (FastAPI) + worker (SAQ) | Cloud Run | **US$ 0** (`--min-instances=0`) |
+| `voyager-web` | Frontend Next.js 16 | Cloud Run | **US$ 0** (`--min-instances=0`) |
 
-Add-ons no `voyager-ia`: PostgreSQL Essential-0 e Key-Value (Redis) Mini.
-O passo a passo completo de provisionamento está no
-[runbook de deploy](../operations/deploy.md).
+O passo a passo completo de automação está em `scripts/deploy_gcp.ps1` e `cloudbuild.yaml`.
 
 ## Imagem Docker
 
@@ -22,9 +20,9 @@ O `Dockerfile` é **multi-stage**: três estágios de base e três de deploy.
 | `builder` | base dos demais | dependências de produção (`--no-dev`), COPY seletivo |
 | `test` | CI | dev deps + `tests/`; `CMD` roda pytest |
 | `runtime` | base de produção | imagem enxuta, **usuário non-root** (`USER app`) |
-| `web` | deploy | `uvicorn` escutando em `$PORT` |
+| `web` | deploy | `uvicorn` escutando em `$PORT` injetada pelo Cloud Run |
 | `worker` | deploy | `saq src.worker.settings.settings` |
-| `release` | release phase | `alembic upgrade head` — se falhar, o Heroku **aborta o deploy e mantém a versão anterior** |
+| `release` | migrations | `alembic upgrade head` |
 
 ```bash
 # Rodar a suíte dentro do container (o que o CI faz)
@@ -43,46 +41,24 @@ O estágio `runtime` define `APP_ENV=production`, o que ativa
 
 ## Como publicar
 
-### Backend (`voyager-ia`)
+### Deploy Automatizado no Google Cloud Run
 
 ```powershell
-pwsh scripts/deploy_heroku.ps1
+pwsh scripts/deploy_gcp.ps1 -ProjectId SEU_PROJECT_ID -Region us-central1
 ```
 
-O script autentica no registry, constrói as três imagens (`web`, `worker`,
-`release`), envia e libera. A ordem é: build → push → **release phase**
-(migrations) → troca dos dynos.
-
-!!! warning "`oci-mediatypes=false` não é opcional"
-    O Docker Desktop com containerd image store grava manifests em OCI, e o
-    registry do Heroku aceita apenas Docker manifest v2. Sem a flag no
-    `--output`, o push falha com `error from registry: unsupported`. O script
-    já aplica.
-
-### Frontend (`voyager-web`)
-
-A URL da API entra no bundle em **build time** (`NEXT_PUBLIC_`), não em
-runtime — o `--build-arg` é obrigatório:
-
-```powershell
-cd frontend
-docker buildx build `
-  --build-arg NEXT_PUBLIC_API_URL=https://voyager-ia-d97e5ffe11f1.herokuapp.com `
-  --target runtime --provenance=false --sbom=false `
-  --output "type=registry,name=registry.heroku.com/voyager-web/web,oci-mediatypes=false,push=true" .
-heroku container:release web --app voyager-web
-```
+O script autentica via Google Cloud SDK (`gcloud`), ativa as APIs (`run.googleapis.com`, `cloudbuild.googleapis.com`), compila os containers via Cloud Build e publica no Cloud Run com `--min-instances=0` e `--max-instances=2`.
 
 ## Arquitetura provisionada
 
 ```mermaid
 graph TB
-    subgraph Heroku
-        FE[App voyager-web<br/>Next.js 16]
-        API[web dyno<br/>FastAPI + SSE]
-        WK[worker dyno<br/>SAQ]
-        PG[(PostgreSQL<br/>Essential-0)]
-        RD[(Key-Value<br/>Redis Mini)]
+    subgraph Google Cloud Platform
+        FE[Cloud Run: voyager-web<br/>Next.js 16]
+        API[Cloud Run: voyager-api<br/>FastAPI + SSE]
+        WK[Cloud Run / Job: voyager-worker<br/>SAQ]
+        PG[(PostgreSQL<br/>Serverless / Cloud SQL)]
+        RD[(Redis<br/>Serverless / Memorystore)]
     end
     FE -->|REST + SSE| API
     API -->|enqueue| RD
