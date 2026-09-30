@@ -80,13 +80,24 @@ vida de cada job do worker.
 | Automáticos | SQLAlchemy e Redis instrumentados nos dois processos |
 | Autenticação | `OTEL_EXPORTER_OTLP_HEADERS` (formato `chave=valor,...`), tratado como segredo |
 
-Backends OTLP com free tier: Grafana Cloud, Honeycomb e New Relic (este último
-incluso no GitHub Student Pack). Basta apontar o endpoint e os headers.
+### Datadog Pro APM (Padrão Corporativo — ADR-0020)
+
+Conforme formalizado em [ADR-0020](../adr/0020-observabilidade-apm-datadog.md), o projeto adota o **Datadog Pro** (ativo via GitHub Student Developer Pack) na região `us5.datadoghq.com`.
+
+O Datadog fornece rastreamento ponta a ponta através do `ddtrace` nos contêineres do Cloud Run:
+
+* **FastAPI (`voyager-api`):** Traces automáticos de requisições HTTP, rotas SSE e latência de middleware.
+* **Worker SAQ (`voyager-worker`):** Traces distribuídos por tarefa, monitorando tempo de enfileiramento e tempo de orquestração da Trip Crew.
+* **Integrações de I/O:** Rastreamento automático de queries SQLAlchemy no PostgreSQL e comandos no Redis.
+
+Configuração via variáveis de ambiente no Cloud Run:
 
 ```bash
-# Exemplo: Grafana Cloud
-OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp-gateway-prod-us-east-0.grafana.net/otlp
-OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic <token>
+DD_ENV=production
+DD_SERVICE=voyager-api
+DD_VERSION=1.0.0
+DD_SITE=us5.datadoghq.com
+DD_TRACE_ENABLED=true
 ```
 
 ## Métricas (próxima etapa)
@@ -112,6 +123,6 @@ Traces correlacionados por `request_id`, propagado do frontend até o worker.
 # Todas as integrações estão saudáveis?
 uv run python -m scripts.check_env
 
-# A aplicação responde? (com o Streamlit rodando)
-curl http://localhost:8501/_stcore/health
+# A API responde ao health check de produção?
+curl http://localhost:8000/health
 ```

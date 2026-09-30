@@ -1,24 +1,32 @@
 # Estratégia de LLM
 
-Dois gateways com papéis definidos, tiers por tipo de tarefa e failover
-explícito. Decisão registrada em [ADR-0002](../adr/0002-gateways-llm.md).
+Dois gateways com papéis definidos, tiers por tipo de tarefa, decision models
+ultrarrápidos e failover explícito. Decisões registradas em [ADR-0002](../adr/0002-gateways-llm.md) e [ADR-0019](../adr/0019-decision-models-jev.md).
 
-## Tiers
+## Tiers & Hierarquia de Execução
 
-| Tier | Uso | Primário | Fallback |
-| ---- | --- | -------- | -------- |
-| `fast` | Guia Local, extração de locais | OpenCode Go (`deepseek-v4-flash`) | OpenRouter (Gemini Flash) |
-| `fast-tools` | Logística (exige function calling) | OpenCode Go (`kimi-k2.7-code`) | OpenRouter (`:free` com tools → pago) |
-| `pro` | Arquiteto de Roteiros | OpenRouter (Gemini Flash pago) | OpenCode Go (`glm-5.2`) |
+| Tier | Uso | Primário | Fallback | Latência / Custo |
+| ---- | --- | -------- | -------- | ---------------- |
+| `tier-0` (Decisão / Guardrail) | Triagem de briefing, estilo e guardrail | OpenRouter (`typesafe/jev-latest`) | Pydantic local | <50ms · Saída US$ 0,00 |
+| `fast` | Guia Local, extração de POIs | OpenCode Go (`deepseek-v4.1-flash`) | Gemini 3.8 Flash | Alta vazão · Cota inclusa |
+| `fast-tools` | Logística (busca web Tavily) | OpenCode Go (`kimi-k2.7-code`) | OpenRouter (`:free` com tools) | Tool calling confiável |
+| `pro` | Arquiteto de Roteiros | Gemini 3.8 Flash / Pro | OpenCode Go (`deepseek-v4-pro`) | Máxima consistência |
 
 Todos os identificadores vêm de **configuração** (`LLM_MODEL_*`,
 `LLM_FALLBACK_*`), nunca do código — trocar de modelo não exige deploy de código.
 
-!!! warning "Modelos mudam de catálogo"
-    Durante a implementação, o `llama-3.3-70b-instruct:free` **desapareceu** do
-    catálogo do OpenRouter e o Gemini 2.5 já havia sido superado pelo 3.5. Por
-    isso existe o `scripts/check_env.py`: ele valida os IDs configurados contra
-    o catálogo real de cada provedor.
+!!! tip "Decision Models Especializados (Jev First — ADR-0019)"
+    Para tarefas puramente de decisão, categorização discreta (`Choice`) ou validação
+    booleana (`Noul`), o **Jev (`typesafe/jev-latest`)** é priorizado sobre LLMs de chat.
+    Com latência sub-50ms e **US$ 0,00 por output token**, ele protege o worker contra
+    entradas inválidas ou maliciosas com custo marginal zero.
+
+!!! warning "Modelos mudam de catálogo dinamicamente"
+    Conforme documentado no inventário global de recursos (`resources.md`), modelos
+    gratuitos com a tag `:free` no OpenRouter têm alta rotatividade. Sempre consulte a
+    coleção oficial em [openrouter.ai/collections/free-models](https://openrouter.ai/collections/free-models)
+    para verificar quais modelos estão ativos no momento. O script `scripts/check_env.py`
+    valida os IDs configurados contra o catálogo real.
 
 ## Divisão de papéis entre gateways
 

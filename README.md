@@ -52,7 +52,7 @@ Uma conversa genérica não oferece, por padrão, controle explícito sobre pesq
 | **Duração observada** | ~51s em uma execução de referência · SLO definido: p95 < 90s |
 | **Cobertura backend** | 92,61% na validação local completa · gate de CI ≥ 90% |
 | **Cobertura frontend** | gates de CI: ≥ 90% linhas/funções e ≥ 85% branches |
-| **Decisões documentadas** | 18 ADRs com trade-offs explícitos |
+| **Decisões documentadas** | 22 ADRs com trade-offs explícitos |
 
 > **Metodologia:** os tokens são medidos. O comparativo reaplica duas tabelas de preço ao mesmo volume observado (1.511 tokens de prompt + 6.919 de completion); não é uma segunda execução no GPT-4o, uma fatura do provedor nem o custo total das ferramentas e da infraestrutura. A amostra é um benchmark funcional, não um teste de carga. Veja a [metodologia FinOps](docs/operations/finops.md) e o [fluxo de execução](docs/architecture/execution-flow.md).
 

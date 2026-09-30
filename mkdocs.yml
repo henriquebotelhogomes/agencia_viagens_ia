@@ -117,6 +117,10 @@ nav:
       - ADR-0016 Internacionalização: adr/0016-i18n.md
       - ADR-0017 Versionamento de roteiro: adr/0017-versionamento-roteiro.md
       - ADR-0018 Hospedagem Google Cloud Run: adr/0018-hospedagem-gcp-cloud-run.md
+      - ADR-0019 Decision Models Jev: adr/0019-decision-models-jev.md
+      - ADR-0020 Observabilidade Datadog: adr/0020-observabilidade-apm-datadog.md
+      - ADR-0021 Red-Teaming Promptfoo e DSPy: adr/0021-red-teaming-promptfoo-dspy.md
+      - ADR-0022 Analytics FinOps DuckDB: adr/0022-analytics-finops-duckdb.md
   - Operação:
       - Deploy: operations/deploy.md
       - Observabilidade: operations/observability.md

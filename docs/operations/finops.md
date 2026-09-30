@@ -56,6 +56,8 @@ consome créditos do OpenRouter.
 | Tiers baratos como default | ✅ ativo | Só o output final usa modelo pago |
 | `max_iter=3` por agente | ✅ ativo | Limita loops de raciocínio |
 | Teto de 8 locais na extração | ✅ ativo | Controla custo de geocoding |
+| **Tier 0 Jev (ADR-0019)** | ✅ ativo | Triagem prévia com **US$ 0,00 por output token** |
+| **Analytics DuckDB (ADR-0022)** | ✅ ativo | OLAP colunar em `.parquet` com custo $0 de infra |
 | Cache de resultados de busca | ⏳ pendente | Reduz consumo de créditos Tavily |
 | Teto de requests no Go | ⏳ pendente | Protege a cota pessoal de coding |
 | Cache semântico (pgvector) | ⏳ Fase 3 | Reaproveita roteiros "parecidos" |

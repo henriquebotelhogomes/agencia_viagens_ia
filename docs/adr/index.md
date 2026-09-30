@@ -33,6 +33,10 @@ quando o contexto muda.
 | [0016](0016-i18n.md) | Internacionalização | Aceita | Conteúdo i18n; interface somente em português |
 | [0017](0017-versionamento-roteiro.md) | Versionamento de roteiro | Aceita | Linhagem root/parent, rollback append-only, diff client-side |
 | [0018](0018-hospedagem-gcp-cloud-run.md) | Hospedagem GCP | Aceita | Google Cloud Run com Scale-to-Zero $0/mês (supersede ADR-0015) |
+| [0019](0019-decision-models-jev.md) | Decision Models | Aceita | Jev (typesafe/jev-latest) Tier 0 para triagem e guardrails |
+| [0020](0020-observabilidade-apm-datadog.md) | APM e Tracing Distribuído | Aceita | Datadog Pro via GitHub Student (APM full-stack) |
+| [0021](0021-red-teaming-promptfoo-dspy.md) | Governança de Prompts | Aceita | Promptfoo no CI/CD + Compilação com DSPy |
+| [0022](0022-analytics-finops-duckdb.md) | Analytics & FinOps | Aceita | DuckDB + Parquet para telemetria colunar OLAP |
 
 ## Formato
 
