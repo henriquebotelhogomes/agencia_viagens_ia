@@ -20,7 +20,7 @@ dependencies = [
     "geopy>=2.4,<3.0",
     "pydantic-settings>=2.10,<3.0",
     "loguru>=0.7,<1.0",
-    "redis>=7.4,<8.0",
+    "redis>=7.4,<9.0",
     "langfuse>=2.59,<3.0",
     "tavily-python>=0.5,<1.0",
     # --- Fase 1: API + worker + persistência (PRD D6/D7/D8) ---
