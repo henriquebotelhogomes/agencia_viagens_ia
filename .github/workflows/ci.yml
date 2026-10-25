@@ -12,7 +12,7 @@ jobs:
     # Testes unitários não usam chaves reais (item S11 do PRD):
     # todos os serviços externos são mockados.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
@@ -51,7 +51,7 @@ jobs:
       run:
         working-directory: ./frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Node 22
         uses: actions/setup-node@v4
@@ -98,7 +98,7 @@ jobs:
     needs: [quality, frontend]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Node 22
         uses: actions/setup-node@v4
@@ -158,7 +158,7 @@ jobs:
       # Necessário para o gh-deploy publicar no branch gh-pages
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
@@ -192,7 +192,7 @@ jobs:
       github.ref == 'refs/heads/main' ||
       github.ref == 'refs/heads/master'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Build test image (estágio com dev deps + tests)
         run: docker build --target test -t agencia-viagens-ia:test .
